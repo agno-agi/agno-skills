@@ -1,10 +1,8 @@
-# Agno Skill for Claude Code
+# Agno Skills
 
-Official [Agno](https://github.com/agno-agi/agno) skill for Claude Code. Gives Claude deep knowledge of the Agno AI agent framework for building production-ready agents, teams, workflows, and MCP integrations.
+Official [Agno](https://github.com/agno-agi/agno) skills for Claude Code. Provides comprehensive knowledge of the Agno framework for building production-ready agents, teams, workflows, and MCP integrations.
 
-## What This Skill Does
-
-When you're working with Agno in Claude Code, this skill provides:
+## What's Included
 
 - **Accurate code examples** pulled from the official cookbook
 - **API reference** for Agent, Team, Workflow, MCP, Tools, Learning, and Models
@@ -14,33 +12,31 @@ When you're working with Agno in Claude Code, this skill provides:
 
 ## Install
 
-### Option 1: Add as a marketplace plugin
-
 ```bash
-# In Claude Code
-/plugin marketplace add agno-agi/agno-skill
-/plugin install agno@agno-skill
+# Add the marketplace
+/plugin marketplace add agno-agi/agno-skills
+
+# Install the Agno skill
+/plugin install agno@agno-skills
 ```
 
-### Option 2: Add directly to your project
+### Manual Install
 
-Copy the `skills/agno/` directory into your project:
+Copy the skill directly into your project or global config:
 
 ```bash
+# Project-level
 mkdir -p .claude/skills
-cp -r skills/agno .claude/skills/agno
-```
+cp -r plugins/agno/skills/agno .claude/skills/agno
 
-### Option 3: Add to your global Claude Code config
-
-```bash
+# Global
 mkdir -p ~/.claude/skills
-cp -r skills/agno ~/.claude/skills/agno
+cp -r plugins/agno/skills/agno ~/.claude/skills/agno
 ```
 
 ## Usage
 
-Once installed, Claude Code will automatically use this skill when you:
+Once installed, the skill activates automatically when you:
 
 - Ask about building Agno agents
 - Write code using `agno.*` imports
@@ -54,11 +50,11 @@ You can also invoke it directly:
 /agno How do I create a multi-agent team?
 ```
 
-## What's Included
+## Structure
 
 ```
-skills/agno/
-├── SKILL.md                    # Main skill file (examples + patterns)
+plugins/agno/skills/agno/
+├── SKILL.md                    # Main skill (10 examples + patterns)
 └── references/
     ├── agents.md               # Agent API reference
     ├── teams.md                # Team modes and coordination
@@ -71,10 +67,8 @@ skills/agno/
 
 ## Updating
 
-This skill is versioned alongside the Agno framework. To get the latest version:
-
 ```bash
-/plugin update agno@agno-skill
+/plugin update agno@agno-skills
 ```
 
 ## Links
