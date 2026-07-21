@@ -25,18 +25,18 @@ agent = Agent(model="openai:gpt-4o")
 | OpenAI | `OpenAIResponses` | `agno.models.openai` | `OpenAIResponses(id="gpt-5.2")` |
 | Anthropic | `Claude` | `agno.models.anthropic` | `Claude(id="claude-sonnet-4-5-20250929")` |
 | Google | `Gemini` | `agno.models.google` | `Gemini(id="gemini-3-flash-preview")` |
-| AWS Bedrock | `Bedrock` | `agno.models.aws` | `Bedrock(id="anthropic.claude-v2")` |
-| AWS Claude | `AWSClaude` | `agno.models.aws` | `AWSClaude(id="claude-sonnet-4-5-20250929")` |
+| AWS Bedrock | `AwsBedrock` | `agno.models.aws` | `AwsBedrock(id="us.anthropic.claude-3-5-haiku-20241022-v1:0")` |
+| AWS Claude | `Claude` | `agno.models.aws` | `Claude(id="global.anthropic.claude-sonnet-4-5-20250929-v1:0")` |
 | Azure | `AzureOpenAI` | `agno.models.azure` | `AzureOpenAI(id="gpt-4o", azure_endpoint="...")` |
 | Azure | `AzureAIFoundry` | `agno.models.azure` | `AzureAIFoundry(id="...", azure_endpoint="...")` |
-| Vertex AI | `VertexAIClaude` | `agno.models.vertexai` | `VertexAIClaude(id="claude-sonnet-4-5-20250929")` |
+| Vertex AI | `Claude` | `agno.models.vertexai.claude` | `Claude(id="claude-sonnet-4@20250514")` |
 
 ### Tier 2 - Inference Providers
 
 | Provider | Class | Import | Example |
 |----------|-------|--------|---------|
 | Groq | `Groq` | `agno.models.groq` | `Groq(id="llama-3.3-70b-versatile")` |
-| Mistral | `Mistral` | `agno.models.mistral` | `Mistral(id="mistral-large-latest")` |
+| Mistral | `MistralChat` | `agno.models.mistral` | `MistralChat(id="mistral-large-latest")` |
 | Cohere | `Cohere` | `agno.models.cohere` | `Cohere(id="command-r-plus")` |
 | Fireworks | `Fireworks` | `agno.models.fireworks` | `Fireworks(id="...")` |
 | Together | `Together` | `agno.models.together` | `Together(id="...")` |
@@ -53,7 +53,7 @@ agent = Agent(model="openai:gpt-4o")
 
 | Provider | Class | Import | Example |
 |----------|-------|--------|---------|
-| Ollama | `OllamaChat` | `agno.models.ollama` | `OllamaChat(id="llama3")` |
+| Ollama | `Ollama` | `agno.models.ollama` | `Ollama(id="llama3.1")` |
 | LM Studio | `LMStudio` | `agno.models.lmstudio` | `LMStudio(id="...")` |
 | Llama.cpp | `LlamaCpp` | `agno.models.llama_cpp` | `LlamaCpp(id="...")` |
 | VLLM | `VLLM` | `agno.models.vllm` | `VLLM(id="...")` |
