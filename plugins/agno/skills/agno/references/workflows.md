@@ -101,6 +101,8 @@ condition = Condition(
 
 CEL variables available: `input`, `previous_step_content`, `previous_step_outputs`, `additional_data`, `session_state`
 
+String evaluators require the optional `cel-python` package. Without it the expression is never evaluated — Condition returns False, Loop `end_condition` never ends early, Router selects nothing — and the run still completes, logging only an error.
+
 ### Loop - Iterative Execution
 
 ```python
@@ -148,6 +150,8 @@ workflow.print_response("Input message", stream=True)
 response = await workflow.arun("Input message")
 await workflow.aprint_response("Input message", stream=True)
 ```
+
+`run()`/`arun()` silently ignore unknown kwargs. That includes several that Agent/Team accept but Workflow does not — `output_schema`, `debug_mode`, `knowledge_filters`, `add_history_to_context`, `yield_run_output` are silent no-ops here.
 
 ## Example: Research Pipeline
 

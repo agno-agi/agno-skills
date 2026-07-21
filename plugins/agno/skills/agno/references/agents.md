@@ -43,7 +43,8 @@ agent = Agent(
 
     # --- Knowledge (RAG) ---
     knowledge=knowledge_base,          # Knowledge instance (agno.knowledge.knowledge)
-    add_knowledge_to_context=True,     # Add retrieved docs to context
+    search_knowledge=True,             # Default True; False silently leaves attached knowledge unused
+    add_knowledge_to_context=True,     # Add retrieved docs to context (independent of search_knowledge)
 
     # --- Learning ---
     learning=LearningMachine(...),     # Or learning=True for defaults
@@ -117,6 +118,8 @@ response = agent.run(
 )
 ```
 
+`run()`/`arun()` end in `**kwargs` and silently ignore unknown keywords — a typo'd kwarg is a no-op, not an error.
+
 ### print_response() / aprint_response()
 
 Execute and print formatted output to console.
@@ -154,6 +157,8 @@ The response object from `agent.run()`:
 response = agent.run("message")
 
 response.content          # str or BaseModel (if output_schema)
+                          # If output_schema parsing fails, .content stays a raw str
+                          # (warning only, never raises) - guard with isinstance
 response.messages         # List of messages exchanged
 response.metrics          # Token usage, timing, etc.
 response.run_id           # Unique run identifier

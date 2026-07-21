@@ -72,6 +72,8 @@ agent = Agent(
 )
 
 response = agent.run("Analyze NVIDIA")
+# On parse failure .content stays a raw str (agno logs a warning, never raises)
+assert isinstance(response.content, StockAnalysis)
 analysis: StockAnalysis = response.content
 print(f"{analysis.company_name}: {analysis.recommendation}")
 ```

@@ -42,6 +42,8 @@ team = Team(
 )
 ```
 
+If `output_schema` parsing fails, `.content` stays the raw `str` (agno logs a warning, never raises) — guard with `isinstance` before typed access.
+
 ## Team Modes
 
 ### coordinate (default)

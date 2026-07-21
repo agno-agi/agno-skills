@@ -150,3 +150,4 @@ toolbox = MCPToolbox(
 3. **Use tool_name_prefix** with multiple servers to avoid name collisions
 4. **MCP is async-only** - All MCP operations require async/await
 5. **Use refresh_connection=True** if server state changes between runs
+6. **connect() swallows failures** - a failed connection is logged and the toolkit is left empty, so the agent runs tool-less; check that `tools.functions` is non-empty when the tools are required
