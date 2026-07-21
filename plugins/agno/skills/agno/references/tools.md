@@ -50,11 +50,18 @@ def my_tool(arg: str) -> str:
 
 ### Tool Hooks
 
+Hook parameters are injected by name — only `agent`, `team`, `run_context`, and `fc` (the `FunctionCall`) are recognized. A hook with any other signature raises a TypeError that agno swallows: the hook silently never runs.
+
 ```python
-@tool(
-    pre_hook=lambda name, args: print(f"Calling {name}"),
-    post_hook=lambda name, args, result: print(f"Result: {result}"),
-)
+from agno.tools import FunctionCall, tool
+
+def pre_hook(fc: FunctionCall):
+    print(f"Calling {fc.function.name} with {fc.arguments}")
+
+def post_hook(fc: FunctionCall):
+    print(f"Result: {fc.result}")
+
+@tool(pre_hook=pre_hook, post_hook=post_hook)
 def my_tool(arg: str) -> str:
     return "result"
 ```
