@@ -81,6 +81,9 @@ MCPTools(
 Connect to multiple MCP servers simultaneously:
 
 ```python
+import os
+
+from agno.agent import Agent
 from agno.tools.mcp import MultiMCPTools
 
 async def run():
@@ -115,10 +118,11 @@ MultiMCPTools(
     timeout_seconds=30,                # Read timeout
     include_tools=["tool1"],           # Filter tools
     exclude_tools=["tool2"],
-    tool_name_prefix="prefix",
     refresh_connection=False,
 )
 ```
+
+Note: `tool_name_prefix` exists only on `MCPTools` — passing it to `MultiMCPTools` raises a TypeError.
 
 ## Tool Filtering
 
@@ -151,7 +155,7 @@ MCPTools(
 For MCP Toolbox for Databases and similar toolbox servers:
 
 ```python
-from agno.tools.mcp import MCPToolbox
+from agno.tools.mcp_toolbox import MCPToolbox
 
 toolbox = MCPToolbox(
     url="http://localhost:5000",
