@@ -30,7 +30,7 @@ step = Step(
     description="Fetch market data",
     max_retries=3,                     # Retry on failure
     skip_on_failure=False,             # Skip instead of failing workflow
-    add_workflow_history=True,         # Include prior step outputs
+    add_workflow_history=True,         # Include previous workflow runs from the session
     num_history_runs=3,                # How many prior runs to include
 )
 ```
@@ -84,20 +84,24 @@ parallel = Parallel(
 # With callable
 condition = Condition(
     evaluator=lambda input: "urgent" in input.input.lower(),
-    steps=urgent_step,
-    else_steps=normal_step,
+    steps=[urgent_step],
+    else_steps=[normal_step],
     name="Priority Check",
 )
 
 # With CEL expression
 condition = Condition(
     evaluator='input.contains("urgent")',
-    steps=urgent_step,
-    else_steps=normal_step,
+    steps=[urgent_step],
+    else_steps=[normal_step],
 )
 ```
 
+`steps=` and `else_steps=` must be lists. A bare Step is silently skipped — the branch never executes and the run still reports completed.
+
 CEL variables available: `input`, `previous_step_content`, `previous_step_outputs`, `additional_data`, `session_state`
+
+String evaluators require the optional `cel-python` package. Without it the expression is never evaluated — Condition returns False, Loop `end_condition` never ends early, Router selects nothing — and the run still completes, logging only an error.
 
 ### Loop - Iterative Execution
 
@@ -147,6 +151,8 @@ response = await workflow.arun("Input message")
 await workflow.aprint_response("Input message", stream=True)
 ```
 
+`run()`/`arun()` silently ignore unknown kwargs on step-list workflows. That includes several that Agent/Team accept but Workflow does not — `output_schema`, `debug_mode`, `knowledge_filters`, `add_history_to_context`, `yield_run_output` are silent no-ops. Callable workflows are inconsistent: depending on the callable type and the sync/async/streaming path, extras are either filtered to the function's signature or passed through raw (raising TypeError on undeclared ones) — rely on neither.
+
 ## Example: Research Pipeline
 
 ```python
@@ -157,20 +163,20 @@ from agno.workflow import Step, Workflow
 
 data_agent = Agent(
     name="Data Gatherer",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
     instructions=["Gather raw market data. Don't analyze, just organize."],
 )
 
 analyst = Agent(
     name="Analyst",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     instructions=["Analyze the data. Identify strengths, weaknesses, red flags."],
 )
 
 writer = Agent(
     name="Report Writer",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     instructions=["Write a concise investment brief. Lead with the bottom line."],
     markdown=True,
 )
@@ -197,8 +203,8 @@ workflow = Workflow(
         Step(name="Classify", agent=classifier_agent),
         Condition(
             evaluator=lambda input: "technical" in input.previous_step_content.lower(),
-            steps=Step(name="Technical", agent=tech_agent),
-            else_steps=Step(name="General", agent=general_agent),
+            steps=[Step(name="Technical", agent=tech_agent)],
+            else_steps=[Step(name="General", agent=general_agent)],
         ),
         Step(name="Finalize", agent=writer_agent),
     ],

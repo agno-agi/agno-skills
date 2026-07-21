@@ -5,6 +5,7 @@
 ### Using the @tool Decorator
 
 ```python
+from agno.agent import Agent
 from agno.tools.decorator import tool
 
 @tool
@@ -50,11 +51,18 @@ def my_tool(arg: str) -> str:
 
 ### Tool Hooks
 
+Hook parameters are injected by name — only `agent`, `team`, `run_context`, and `fc` (the `FunctionCall`) are recognized. A hook with any other signature raises a TypeError that agno swallows: the hook silently never runs.
+
 ```python
-@tool(
-    pre_hook=lambda name, args: print(f"Calling {name}"),
-    post_hook=lambda name, args, result: print(f"Result: {result}"),
-)
+from agno.tools import FunctionCall, tool
+
+def pre_hook(fc: FunctionCall):
+    print(f"Calling {fc.function.name} with {fc.arguments}")
+
+def post_hook(fc: FunctionCall):
+    print(f"Result: {fc.result}")
+
+@tool(pre_hook=pre_hook, post_hook=post_hook)
 def my_tool(arg: str) -> str:
     return "result"
 ```
@@ -64,14 +72,13 @@ def my_tool(arg: str) -> str:
 For related tools, extend Toolkit:
 
 ```python
+from agno.agent import Agent
 from agno.tools.toolkit import Toolkit
 
 class MyToolkit(Toolkit):
     def __init__(self, api_key: str):
-        super().__init__(name="my_toolkit")
+        super().__init__(name="my_toolkit", tools=[self.search, self.get_details])
         self.api_key = api_key
-        self.register(self.search)
-        self.register(self.get_details)
 
     def search(self, query: str) -> str:
         """Search for items."""
@@ -84,6 +91,8 @@ class MyToolkit(Toolkit):
 agent = Agent(tools=[MyToolkit(api_key="...")])
 ```
 
+Registering via `self.register(self.search)` also still works; `tools=` in `super().__init__` is the current convention.
+
 ## Built-in Tools (120+)
 
 ### Search & Web
@@ -93,9 +102,9 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 | TavilyTools | `agno.tools.tavily` | AI-optimized web search |
 | BraveSearchTools | `agno.tools.bravesearch` | Brave search API |
 | ExaTools | `agno.tools.exa` | Exa search API |
-| SearxNGTools | `agno.tools.searxng` | SearxNG metasearch |
+| SearxngTools | `agno.tools.searxng` | SearxNG metasearch |
 | SerperTools | `agno.tools.serper` | Google SERP API |
-| JinaTools | `agno.tools.jina` | Jina AI tools |
+| JinaReaderTools | `agno.tools.jina` | Jina AI tools |
 | WebSearchTools | `agno.tools.websearch` | Generic web search |
 
 ### Data & Databases
@@ -103,9 +112,9 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 |------|--------|-------------|
 | DuckDbTools | `agno.tools.duckdb` | DuckDB SQL queries |
 | PostgresTools | `agno.tools.postgres` | PostgreSQL queries |
-| SqlTools | `agno.tools.sql` | Generic SQL tools |
+| SQLTools | `agno.tools.sql` | Generic SQL tools |
 | PandasTools | `agno.tools.pandas` | DataFrame operations |
-| CsvToolkit | `agno.tools.csv_toolkit` | CSV file operations |
+| CsvTools | `agno.tools.csv_toolkit` | CSV file operations |
 
 ### Content & Knowledge
 | Tool | Import | Description |
@@ -122,7 +131,7 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 | GithubTools | `agno.tools.github` | GitHub API |
 | JiraTools | `agno.tools.jira` | Jira project management |
 | SlackTools | `agno.tools.slack` | Slack messaging |
-| GmailTools | `agno.tools.gmail` | Gmail operations |
+| GmailTools | `agno.tools.google.gmail` | Gmail operations |
 | NotionTools | `agno.tools.notion` | Notion pages/databases |
 | LinearTools | `agno.tools.linear` | Linear issue tracking |
 | DiscordTools | `agno.tools.discord` | Discord messaging |
@@ -153,8 +162,8 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 | Tool | Import | Description |
 |------|--------|-------------|
 | MCPTools | `agno.tools.mcp` | Single MCP server |
-| MultiMCPTools | `agno.tools.mcp` | Multiple MCP servers |
-| MCPToolbox | `agno.tools.mcp` | Toolbox MCP servers |
+| MultiMCPTools | `agno.tools.mcp` | Deprecated — use multiple MCPTools instances |
+| MCPToolbox | `agno.tools.mcp_toolbox` | Toolbox MCP servers |
 
 ## Using Tools with Agents
 

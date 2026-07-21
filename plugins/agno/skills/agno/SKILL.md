@@ -39,7 +39,7 @@ from agno.tools.yfinance import YFinanceTools
 
 agent = Agent(
     name="Finance Agent",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
     add_datetime_to_context=True,
     markdown=True,
@@ -66,12 +66,14 @@ class StockAnalysis(BaseModel):
     recommendation: str = Field(..., description="Buy, Hold, or Sell")
 
 agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
     output_schema=StockAnalysis,
 )
 
 response = agent.run("Analyze NVIDIA")
+# On parse failure .content stays a raw str (agno logs a warning, never raises)
+assert isinstance(response.content, StockAnalysis)
 analysis: StockAnalysis = response.content
 print(f"{analysis.company_name}: {analysis.recommendation}")
 ```
@@ -84,7 +86,7 @@ from agno.db.sqlite import SqliteDb
 from agno.models.google import Gemini
 
 agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     db=SqliteDb(db_file="tmp/agents.db"),
     add_history_to_context=True,
     num_history_runs=5,
@@ -107,10 +109,10 @@ from agno.models.google import Gemini
 db = SqliteDb(db_file="tmp/agents.db")
 
 agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     db=db,
     memory_manager=MemoryManager(
-        model=Gemini(id="gemini-3-flash-preview"),
+        model=Gemini(id="gemini-3.5-flash"),
         db=db,
     ),
     enable_agentic_memory=True,  # Agent decides when to store/recall
@@ -136,20 +138,20 @@ from agno.tools.yfinance import YFinanceTools
 bull = Agent(
     name="Bull Analyst",
     role="Make the investment case FOR a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 bear = Agent(
     name="Bear Analyst",
     role="Make the investment case AGAINST a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 team = Team(
     name="Investment Research",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     members=[bull, bear],
     instructions=["Get both perspectives, then synthesize a balanced recommendation"],
     show_members_responses=True,
@@ -167,9 +169,9 @@ from agno.models.google import Gemini
 from agno.tools.yfinance import YFinanceTools
 from agno.workflow import Step, Workflow
 
-data_agent = Agent(name="Data Gatherer", model=Gemini(id="gemini-3-flash-preview"), tools=[YFinanceTools()])
-analyst = Agent(name="Analyst", model=Gemini(id="gemini-3-flash-preview"))
-writer = Agent(name="Report Writer", model=Gemini(id="gemini-3-flash-preview"), markdown=True)
+data_agent = Agent(name="Data Gatherer", model=Gemini(id="gemini-3.5-flash"), tools=[YFinanceTools()])
+analyst = Agent(name="Analyst", model=Gemini(id="gemini-3.5-flash"))
+writer = Agent(name="Report Writer", model=Gemini(id="gemini-3.5-flash"), markdown=True)
 
 workflow = Workflow(
     name="Research Pipeline",
@@ -220,23 +222,25 @@ asyncio.run(run_agent("What is Agno?"))
 
 ### 9. Multiple MCP Servers
 
+One `MCPTools` instance per server (`MultiMCPTools` is deprecated):
+
 ```python
 import asyncio
-from os import getenv
 from agno.agent import Agent
-from agno.tools.mcp import MultiMCPTools
+from agno.tools.mcp import MCPTools
 
 async def run_agent(message: str) -> None:
-    mcp_tools = MultiMCPTools(
-        commands=["npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt"],
-        urls=["http://localhost:8000/mcp"],
-        urls_transports=["streamable-http"],
-        timeout_seconds=30,
-    )
-    await mcp_tools.connect()
-    agent = Agent(tools=[mcp_tools], markdown=True)
+    airbnb_tools = MCPTools(command="npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt")
+    local_tools = MCPTools(transport="streamable-http", url="http://localhost:8000/mcp")
+
+    await airbnb_tools.connect()
+    await local_tools.connect()
+
+    agent = Agent(tools=[airbnb_tools, local_tools], markdown=True)
     await agent.aprint_response(message, stream=True)
-    await mcp_tools.close()
+
+    await airbnb_tools.close()
+    await local_tools.close()
 
 asyncio.run(run_agent("Find listings in Barcelona"))
 ```
@@ -252,7 +256,7 @@ from agno.models.openai import OpenAIResponses
 db = PostgresDb(db_url="postgresql+psycopg://ai:ai@localhost:5532/ai")
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.2"),
+    model=OpenAIResponses(id="gpt-5.5"),
     db=db,
     learning=LearningMachine(
         user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),
@@ -298,6 +302,7 @@ agent = Agent(debug_mode=True)  # Detailed logs of messages, tools, tokens
 
 ### Pattern: Custom Tools
 ```python
+from agno.agent import Agent
 from agno.tools.decorator import tool
 
 @tool
@@ -310,10 +315,10 @@ agent = Agent(tools=[get_weather])
 
 ## Important Rules
 
-- **Never create agents in loops** - reuse agents for performance
+- **Reuse agents across runs** - reuse preserves session continuity; Agent construction itself costs ~4 microseconds, so what matters is not rebuilding the Model/Db/Knowledge objects you hand it
 - **Use `output_schema`** for structured responses (not free-form parsing)
 - **PostgreSQL for production**, SQLite only for development
-- **Both sync and async** - all public methods have async variants (prefix with `a`)
+- **Async twins cover the I/O surface** - `run`/`arun`, `print_response`/`aprint_response`, session methods; `save`, `load`, `delete`, `rename` and ~40 other public methods are sync-only, and async DB is the separate `AsyncSqliteDb` class
 - **Always close MCP connections** - use try/finally or async context managers
 - **Enable `debug_mode=True`** when troubleshooting
 
@@ -324,7 +329,7 @@ Detailed documentation is available in `references/`:
 - **agents.md** - Agent parameters, configuration, tools, memory, knowledge, guardrails
 - **teams.md** - Team modes (route/broadcast/tasks), member coordination
 - **workflows.md** - Step types (Step, Parallel, Condition, Loop, Router)
-- **mcp.md** - MCP integration (stdio, SSE, Streamable HTTP), MultiMCPTools
+- **mcp.md** - MCP integration (stdio, SSE, Streamable HTTP), multiple servers
 - **tools.md** - Built-in tools list, custom tool creation, tool hooks
 - **learning.md** - LearningMachine stores (profile, memory, session, knowledge, entity)
 - **models.md** - Supported model providers and configuration

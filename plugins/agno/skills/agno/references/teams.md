@@ -12,13 +12,13 @@ team = Team(
 
     # --- Identity ---
     name="My Team",
-    model=Gemini(id="gemini-3-flash-preview"),  # Leader model
+    model=Gemini(id="gemini-3.5-flash"),  # Leader model
     role="Team leader role description",
 
     # --- Execution Mode ---
     mode="coordinate",                 # coordinate, route, broadcast, tasks
     respond_directly=False,            # Members respond directly to user
-    max_iterations=10,                 # Max coordination loops
+    max_iterations=10,                 # Max task-loop iterations (mode="tasks" only)
 
     # --- Instructions ---
     instructions=["Instruction 1"],
@@ -42,6 +42,8 @@ team = Team(
 )
 ```
 
+If `output_schema` parsing fails, `.content` stays the raw `str` (agno logs a warning, never raises) — guard with `isinstance` before typed access.
+
 ## Team Modes
 
 ### coordinate (default)
@@ -61,7 +63,7 @@ team = Team(
 ```
 
 ### broadcast
-Fan-out pattern. Leader sends the same task to all members simultaneously.
+Fan-out pattern. Leader sends the same task to all members — concurrently on the async path (`arun`), sequentially on the sync path (`run`).
 ```python
 team = Team(
     members=[bull_agent, bear_agent],
@@ -128,20 +130,20 @@ from agno.tools.yfinance import YFinanceTools
 bull = Agent(
     name="Bull Analyst",
     role="Make the investment case FOR a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 bear = Agent(
     name="Bear Analyst",
     role="Make the investment case AGAINST a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 team = Team(
     name="Investment Research",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     members=[bull, bear],
     mode="broadcast",
     show_members_responses=True,

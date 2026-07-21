@@ -41,11 +41,12 @@ class LearningMode(Enum):
 from agno.agent import Agent
 from agno.db.postgres import PostgresDb
 from agno.learn import LearningMachine, LearningMode, UserProfileConfig, UserMemoryConfig
+from agno.models.openai import OpenAIResponses
 
 db = PostgresDb(db_url="postgresql+psycopg://ai:ai@localhost:5532/ai")
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.2"),
+    model=OpenAIResponses(id="gpt-5.5"),
     db=db,
     learning=LearningMachine(
         user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),
@@ -143,7 +144,7 @@ from agno.models.openai import OpenAIResponses
 db = PostgresDb(db_url="postgresql+psycopg://ai:ai@localhost:5532/ai")
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.2"),
+    model=OpenAIResponses(id="gpt-5.5"),
     db=db,
     learning=LearningMachine(
         user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),
@@ -184,7 +185,7 @@ For simple cases, just pass `learning=True`:
 agent = Agent(
     model=model,
     db=db,
-    learning=True,  # Enables all stores with defaults
+    learning=True,  # Enables user_profile + user_memory (ALWAYS mode), not the other stores
 )
 ```
 
@@ -194,6 +195,6 @@ agent = Agent(
 # Print stored data
 agent.learning_machine.user_profile_store.print(user_id=user_id)
 agent.learning_machine.user_memory_store.print(user_id=user_id)
-agent.learning_machine.session_context_store.print(user_id=user_id, session_id=session_id)
-agent.learning_machine.entity_memory_store.print(user_id=user_id)
+agent.learning_machine.session_context_store.print(session_id=session_id)
+agent.learning_machine.entity_memory_store.print(entity_id="acme_corp", entity_type="company")
 ```

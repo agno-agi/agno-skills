@@ -3,7 +3,7 @@
 ## Imports
 
 ```python
-from agno.tools.mcp import MCPTools, MultiMCPTools
+from agno.tools.mcp import MCPTools
 ```
 
 ## Transport Types
@@ -76,48 +76,31 @@ MCPTools(
 )
 ```
 
-## MultiMCPTools - Multiple Servers
+## Multiple Servers
 
-Connect to multiple MCP servers simultaneously:
+`MultiMCPTools` is deprecated ("Please use multiple MCPTools instances instead"). Pass one `MCPTools` instance per server:
 
 ```python
-from agno.tools.mcp import MultiMCPTools
+import os
+
+from agno.agent import Agent
+from agno.tools.mcp import MCPTools
 
 async def run():
-    tools = MultiMCPTools(
-        # stdio servers (commands)
-        commands=[
-            "npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt",
-            "npx -y @modelcontextprotocol/server-brave-search",
-        ],
-        # HTTP servers (urls)
-        urls=["http://localhost:8000/mcp"],
-        urls_transports=["streamable-http"],
-        # Shared config
+    airbnb_tools = MCPTools(command="npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt")
+    search_tools = MCPTools(
+        command="npx -y @modelcontextprotocol/server-brave-search",
         env={"BRAVE_API_KEY": os.getenv("BRAVE_API_KEY")},
-        timeout_seconds=30,
     )
-    await tools.connect()
 
-    agent = Agent(tools=[tools], markdown=True)
+    await airbnb_tools.connect()
+    await search_tools.connect()
+
+    agent = Agent(tools=[airbnb_tools, search_tools], markdown=True)
     await agent.aprint_response("Find listings in Barcelona", stream=True)
-    await tools.close()
-```
 
-## MultiMCPTools Constructor
-
-```python
-MultiMCPTools(
-    commands=["cmd1", "cmd2"],         # List of stdio commands
-    urls=["http://..."],               # List of HTTP/SSE URLs
-    urls_transports=["streamable-http"],  # Transport per URL
-    env={"KEY": "value"},              # Shared environment variables
-    timeout_seconds=30,                # Read timeout
-    include_tools=["tool1"],           # Filter tools
-    exclude_tools=["tool2"],
-    tool_name_prefix="prefix",
-    refresh_connection=False,
-)
+    await airbnb_tools.close()
+    await search_tools.close()
 ```
 
 ## Tool Filtering
@@ -151,7 +134,7 @@ MCPTools(
 For MCP Toolbox for Databases and similar toolbox servers:
 
 ```python
-from agno.tools.mcp import MCPToolbox
+from agno.tools.mcp_toolbox import MCPToolbox
 
 toolbox = MCPToolbox(
     url="http://localhost:5000",
@@ -167,3 +150,4 @@ toolbox = MCPToolbox(
 3. **Use tool_name_prefix** with multiple servers to avoid name collisions
 4. **MCP is async-only** - All MCP operations require async/await
 5. **Use refresh_connection=True** if server state changes between runs
+6. **connect() swallows failures** - a failed connection is logged and the toolkit is left empty, so the agent runs tool-less; check that `tools.functions` is non-empty when the tools are required

@@ -9,7 +9,7 @@ agent = Agent(
     # --- Identity ---
     name="My Agent",                    # Display name
     id="my-agent",                      # Unique identifier
-    model="openai:gpt-4o",             # Model (string shorthand or Model instance)
+    model="openai:gpt-5.5",            # Model (string shorthand or Model instance; "openai" resolves to OpenAIResponses)
 
     # --- Instructions ---
     description="Agent description",    # Added to system message
@@ -42,8 +42,9 @@ agent = Agent(
     update_memory_on_run=False,        # Auto-extract after every run (guaranteed but costly)
 
     # --- Knowledge (RAG) ---
-    knowledge=knowledge_base,          # KnowledgeBase instance
-    add_knowledge_to_context=True,     # Add retrieved docs to context
+    knowledge=knowledge_base,          # Knowledge instance (agno.knowledge.knowledge)
+    search_knowledge=True,             # Default True; False disables the search tool — knowledge goes silently unused unless add_knowledge_to_context=True
+    add_knowledge_to_context=True,     # Add retrieved docs to context (independent of search_knowledge)
 
     # --- Learning ---
     learning=LearningMachine(...),     # Or learning=True for defaults
@@ -117,6 +118,8 @@ response = agent.run(
 )
 ```
 
+`run()`/`arun()` end in `**kwargs` and never reject unknown keywords — a typo'd kwarg raises no helpful error. Extras are not inert either: they are forwarded into internal paths (run-level hooks, custom knowledge retrievers, user-message construction), so a kwarg that matches an internal name can silently change behavior or collide with an existing argument.
+
 ### print_response() / aprint_response()
 
 Execute and print formatted output to console.
@@ -154,6 +157,8 @@ The response object from `agent.run()`:
 response = agent.run("message")
 
 response.content          # str or BaseModel (if output_schema)
+                          # If output_schema parsing fails, .content stays a raw str
+                          # (warning only, never raises) - guard with isinstance
 response.messages         # List of messages exchanged
 response.metrics          # Token usage, timing, etc.
 response.run_id           # Unique run identifier
