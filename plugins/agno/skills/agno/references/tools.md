@@ -75,10 +75,8 @@ from agno.tools.toolkit import Toolkit
 
 class MyToolkit(Toolkit):
     def __init__(self, api_key: str):
-        super().__init__(name="my_toolkit")
+        super().__init__(name="my_toolkit", tools=[self.search, self.get_details])
         self.api_key = api_key
-        self.register(self.search)
-        self.register(self.get_details)
 
     def search(self, query: str) -> str:
         """Search for items."""
@@ -90,6 +88,8 @@ class MyToolkit(Toolkit):
 
 agent = Agent(tools=[MyToolkit(api_key="...")])
 ```
+
+Registering via `self.register(self.search)` also still works; `tools=` in `super().__init__` is the current convention.
 
 ## Built-in Tools (120+)
 
@@ -129,7 +129,7 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 | GithubTools | `agno.tools.github` | GitHub API |
 | JiraTools | `agno.tools.jira` | Jira project management |
 | SlackTools | `agno.tools.slack` | Slack messaging |
-| GmailTools | `agno.tools.gmail` | Gmail operations |
+| GmailTools | `agno.tools.google.gmail` | Gmail operations |
 | NotionTools | `agno.tools.notion` | Notion pages/databases |
 | LinearTools | `agno.tools.linear` | Linear issue tracking |
 | DiscordTools | `agno.tools.discord` | Discord messaging |
@@ -160,7 +160,7 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 | Tool | Import | Description |
 |------|--------|-------------|
 | MCPTools | `agno.tools.mcp` | Single MCP server |
-| MultiMCPTools | `agno.tools.mcp` | Multiple MCP servers |
+| MultiMCPTools | `agno.tools.mcp` | Deprecated — use multiple MCPTools instances |
 | MCPToolbox | `agno.tools.mcp_toolbox` | Toolbox MCP servers |
 
 ## Using Tools with Agents

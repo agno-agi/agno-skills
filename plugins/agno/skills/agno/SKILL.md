@@ -220,23 +220,25 @@ asyncio.run(run_agent("What is Agno?"))
 
 ### 9. Multiple MCP Servers
 
+One `MCPTools` instance per server (`MultiMCPTools` is deprecated):
+
 ```python
 import asyncio
-from os import getenv
 from agno.agent import Agent
-from agno.tools.mcp import MultiMCPTools
+from agno.tools.mcp import MCPTools
 
 async def run_agent(message: str) -> None:
-    mcp_tools = MultiMCPTools(
-        commands=["npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt"],
-        urls=["http://localhost:8000/mcp"],
-        urls_transports=["streamable-http"],
-        timeout_seconds=30,
-    )
-    await mcp_tools.connect()
-    agent = Agent(tools=[mcp_tools], markdown=True)
+    airbnb_tools = MCPTools(command="npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt")
+    local_tools = MCPTools(transport="streamable-http", url="http://localhost:8000/mcp")
+
+    await airbnb_tools.connect()
+    await local_tools.connect()
+
+    agent = Agent(tools=[airbnb_tools, local_tools], markdown=True)
     await agent.aprint_response(message, stream=True)
-    await mcp_tools.close()
+
+    await airbnb_tools.close()
+    await local_tools.close()
 
 asyncio.run(run_agent("Find listings in Barcelona"))
 ```
@@ -324,7 +326,7 @@ Detailed documentation is available in `references/`:
 - **agents.md** - Agent parameters, configuration, tools, memory, knowledge, guardrails
 - **teams.md** - Team modes (route/broadcast/tasks), member coordination
 - **workflows.md** - Step types (Step, Parallel, Condition, Loop, Router)
-- **mcp.md** - MCP integration (stdio, SSE, Streamable HTTP), MultiMCPTools
+- **mcp.md** - MCP integration (stdio, SSE, Streamable HTTP), multiple servers
 - **tools.md** - Built-in tools list, custom tool creation, tool hooks
 - **learning.md** - LearningMachine stores (profile, memory, session, knowledge, entity)
 - **models.md** - Supported model providers and configuration
