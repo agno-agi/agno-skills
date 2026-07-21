@@ -310,10 +310,10 @@ agent = Agent(tools=[get_weather])
 
 ## Important Rules
 
-- **Never create agents in loops** - reuse agents for performance
+- **Reuse agents across runs** - reuse preserves session continuity; Agent construction itself costs ~4 microseconds, so what matters is not rebuilding the Model/Db/Knowledge objects you hand it
 - **Use `output_schema`** for structured responses (not free-form parsing)
 - **PostgreSQL for production**, SQLite only for development
-- **Both sync and async** - all public methods have async variants (prefix with `a`)
+- **Async twins cover the I/O surface** - `run`/`arun`, `print_response`/`aprint_response`, session methods; `save`, `load`, `delete`, `rename` and ~40 other public methods are sync-only, and async DB is the separate `AsyncSqliteDb` class
 - **Always close MCP connections** - use try/finally or async context managers
 - **Enable `debug_mode=True`** when troubleshooting
 

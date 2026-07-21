@@ -42,7 +42,7 @@ agent = Agent(
     update_memory_on_run=False,        # Auto-extract after every run (guaranteed but costly)
 
     # --- Knowledge (RAG) ---
-    knowledge=knowledge_base,          # KnowledgeBase instance
+    knowledge=knowledge_base,          # Knowledge instance (agno.knowledge.knowledge)
     add_knowledge_to_context=True,     # Add retrieved docs to context
 
     # --- Learning ---

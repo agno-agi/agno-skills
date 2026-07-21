@@ -18,7 +18,7 @@ team = Team(
     # --- Execution Mode ---
     mode="coordinate",                 # coordinate, route, broadcast, tasks
     respond_directly=False,            # Members respond directly to user
-    max_iterations=10,                 # Max coordination loops
+    max_iterations=10,                 # Max task-loop iterations (mode="tasks" only)
 
     # --- Instructions ---
     instructions=["Instruction 1"],
@@ -61,7 +61,7 @@ team = Team(
 ```
 
 ### broadcast
-Fan-out pattern. Leader sends the same task to all members simultaneously.
+Fan-out pattern. Leader sends the same task to all members — concurrently on the async path (`arun`), sequentially on the sync path (`run`).
 ```python
 team = Team(
     members=[bull_agent, bear_agent],
