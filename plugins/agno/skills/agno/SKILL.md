@@ -39,7 +39,7 @@ from agno.tools.yfinance import YFinanceTools
 
 agent = Agent(
     name="Finance Agent",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
     add_datetime_to_context=True,
     markdown=True,
@@ -66,7 +66,7 @@ class StockAnalysis(BaseModel):
     recommendation: str = Field(..., description="Buy, Hold, or Sell")
 
 agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
     output_schema=StockAnalysis,
 )
@@ -86,7 +86,7 @@ from agno.db.sqlite import SqliteDb
 from agno.models.google import Gemini
 
 agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     db=SqliteDb(db_file="tmp/agents.db"),
     add_history_to_context=True,
     num_history_runs=5,
@@ -109,10 +109,10 @@ from agno.models.google import Gemini
 db = SqliteDb(db_file="tmp/agents.db")
 
 agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     db=db,
     memory_manager=MemoryManager(
-        model=Gemini(id="gemini-3-flash-preview"),
+        model=Gemini(id="gemini-3.5-flash"),
         db=db,
     ),
     enable_agentic_memory=True,  # Agent decides when to store/recall
@@ -138,20 +138,20 @@ from agno.tools.yfinance import YFinanceTools
 bull = Agent(
     name="Bull Analyst",
     role="Make the investment case FOR a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 bear = Agent(
     name="Bear Analyst",
     role="Make the investment case AGAINST a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 team = Team(
     name="Investment Research",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     members=[bull, bear],
     instructions=["Get both perspectives, then synthesize a balanced recommendation"],
     show_members_responses=True,
@@ -169,9 +169,9 @@ from agno.models.google import Gemini
 from agno.tools.yfinance import YFinanceTools
 from agno.workflow import Step, Workflow
 
-data_agent = Agent(name="Data Gatherer", model=Gemini(id="gemini-3-flash-preview"), tools=[YFinanceTools()])
-analyst = Agent(name="Analyst", model=Gemini(id="gemini-3-flash-preview"))
-writer = Agent(name="Report Writer", model=Gemini(id="gemini-3-flash-preview"), markdown=True)
+data_agent = Agent(name="Data Gatherer", model=Gemini(id="gemini-3.5-flash"), tools=[YFinanceTools()])
+analyst = Agent(name="Analyst", model=Gemini(id="gemini-3.5-flash"))
+writer = Agent(name="Report Writer", model=Gemini(id="gemini-3.5-flash"), markdown=True)
 
 workflow = Workflow(
     name="Research Pipeline",
@@ -256,7 +256,7 @@ from agno.models.openai import OpenAIResponses
 db = PostgresDb(db_url="postgresql+psycopg://ai:ai@localhost:5532/ai")
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.2"),
+    model=OpenAIResponses(id="gpt-5.5"),
     db=db,
     learning=LearningMachine(
         user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),

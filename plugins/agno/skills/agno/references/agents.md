@@ -9,7 +9,7 @@ agent = Agent(
     # --- Identity ---
     name="My Agent",                    # Display name
     id="my-agent",                      # Unique identifier
-    model="openai:gpt-4o",             # Model (string shorthand or Model instance)
+    model="openai:gpt-5.5",            # Model (string shorthand or Model instance; "openai" resolves to OpenAIResponses)
 
     # --- Instructions ---
     description="Agent description",    # Added to system message

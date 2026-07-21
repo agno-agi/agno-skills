@@ -12,7 +12,7 @@ team = Team(
 
     # --- Identity ---
     name="My Team",
-    model=Gemini(id="gemini-3-flash-preview"),  # Leader model
+    model=Gemini(id="gemini-3.5-flash"),  # Leader model
     role="Team leader role description",
 
     # --- Execution Mode ---
@@ -130,20 +130,20 @@ from agno.tools.yfinance import YFinanceTools
 bull = Agent(
     name="Bull Analyst",
     role="Make the investment case FOR a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 bear = Agent(
     name="Bear Analyst",
     role="Make the investment case AGAINST a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
 )
 
 team = Team(
     name="Investment Research",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     members=[bull, bear],
     mode="broadcast",
     show_members_responses=True,

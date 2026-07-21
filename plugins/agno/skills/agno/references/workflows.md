@@ -163,20 +163,20 @@ from agno.workflow import Step, Workflow
 
 data_agent = Agent(
     name="Data Gatherer",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     tools=[YFinanceTools()],
     instructions=["Gather raw market data. Don't analyze, just organize."],
 )
 
 analyst = Agent(
     name="Analyst",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     instructions=["Analyze the data. Identify strengths, weaknesses, red flags."],
 )
 
 writer = Agent(
     name="Report Writer",
-    model=Gemini(id="gemini-3-flash-preview"),
+    model=Gemini(id="gemini-3.5-flash"),
     instructions=["Write a concise investment brief. Lead with the bottom line."],
     markdown=True,
 )
