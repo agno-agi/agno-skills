@@ -302,6 +302,7 @@ agent = Agent(debug_mode=True)  # Detailed logs of messages, tools, tokens
 
 ### Pattern: Custom Tools
 ```python
+from agno.agent import Agent
 from agno.tools.decorator import tool
 
 @tool

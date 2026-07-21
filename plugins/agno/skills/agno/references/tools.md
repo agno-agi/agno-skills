@@ -5,6 +5,7 @@
 ### Using the @tool Decorator
 
 ```python
+from agno.agent import Agent
 from agno.tools.decorator import tool
 
 @tool
@@ -71,6 +72,7 @@ def my_tool(arg: str) -> str:
 For related tools, extend Toolkit:
 
 ```python
+from agno.agent import Agent
 from agno.tools.toolkit import Toolkit
 
 class MyToolkit(Toolkit):
