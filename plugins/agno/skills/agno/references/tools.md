@@ -93,9 +93,9 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 | TavilyTools | `agno.tools.tavily` | AI-optimized web search |
 | BraveSearchTools | `agno.tools.bravesearch` | Brave search API |
 | ExaTools | `agno.tools.exa` | Exa search API |
-| SearxNGTools | `agno.tools.searxng` | SearxNG metasearch |
+| SearxngTools | `agno.tools.searxng` | SearxNG metasearch |
 | SerperTools | `agno.tools.serper` | Google SERP API |
-| JinaTools | `agno.tools.jina` | Jina AI tools |
+| JinaReaderTools | `agno.tools.jina` | Jina AI tools |
 | WebSearchTools | `agno.tools.websearch` | Generic web search |
 
 ### Data & Databases
@@ -103,9 +103,9 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 |------|--------|-------------|
 | DuckDbTools | `agno.tools.duckdb` | DuckDB SQL queries |
 | PostgresTools | `agno.tools.postgres` | PostgreSQL queries |
-| SqlTools | `agno.tools.sql` | Generic SQL tools |
+| SQLTools | `agno.tools.sql` | Generic SQL tools |
 | PandasTools | `agno.tools.pandas` | DataFrame operations |
-| CsvToolkit | `agno.tools.csv_toolkit` | CSV file operations |
+| CsvTools | `agno.tools.csv_toolkit` | CSV file operations |
 
 ### Content & Knowledge
 | Tool | Import | Description |
@@ -154,7 +154,7 @@ agent = Agent(tools=[MyToolkit(api_key="...")])
 |------|--------|-------------|
 | MCPTools | `agno.tools.mcp` | Single MCP server |
 | MultiMCPTools | `agno.tools.mcp` | Multiple MCP servers |
-| MCPToolbox | `agno.tools.mcp` | Toolbox MCP servers |
+| MCPToolbox | `agno.tools.mcp_toolbox` | Toolbox MCP servers |
 
 ## Using Tools with Agents
 
