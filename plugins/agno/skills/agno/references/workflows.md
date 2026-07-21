@@ -30,7 +30,7 @@ step = Step(
     description="Fetch market data",
     max_retries=3,                     # Retry on failure
     skip_on_failure=False,             # Skip instead of failing workflow
-    add_workflow_history=True,         # Include prior step outputs
+    add_workflow_history=True,         # Include previous workflow runs from the session
     num_history_runs=3,                # How many prior runs to include
 )
 ```
@@ -84,18 +84,20 @@ parallel = Parallel(
 # With callable
 condition = Condition(
     evaluator=lambda input: "urgent" in input.input.lower(),
-    steps=urgent_step,
-    else_steps=normal_step,
+    steps=[urgent_step],
+    else_steps=[normal_step],
     name="Priority Check",
 )
 
 # With CEL expression
 condition = Condition(
     evaluator='input.contains("urgent")',
-    steps=urgent_step,
-    else_steps=normal_step,
+    steps=[urgent_step],
+    else_steps=[normal_step],
 )
 ```
+
+`steps=` and `else_steps=` must be lists. A bare Step is silently skipped — the branch never executes and the run still reports completed.
 
 CEL variables available: `input`, `previous_step_content`, `previous_step_outputs`, `additional_data`, `session_state`
 
@@ -197,8 +199,8 @@ workflow = Workflow(
         Step(name="Classify", agent=classifier_agent),
         Condition(
             evaluator=lambda input: "technical" in input.previous_step_content.lower(),
-            steps=Step(name="Technical", agent=tech_agent),
-            else_steps=Step(name="General", agent=general_agent),
+            steps=[Step(name="Technical", agent=tech_agent)],
+            else_steps=[Step(name="General", agent=general_agent)],
         ),
         Step(name="Finalize", agent=writer_agent),
     ],
