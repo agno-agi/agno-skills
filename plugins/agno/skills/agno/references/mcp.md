@@ -37,7 +37,7 @@ asyncio.run(run())
 async def run():
     async with MCPTools(
         transport="streamable-http",
-        url="https://docs.agno.com/mcp",
+        url="https://mcp.agno.com",
     ) as tools:
         agent = Agent(tools=[tools], markdown=True)
         await agent.aprint_response("What is Agno?", stream=True)

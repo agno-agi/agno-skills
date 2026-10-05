@@ -1,337 +1,74 @@
 ---
 name: agno
-description: Agno AI agent framework - build production-ready agents, multi-agent teams, workflows, MCP integrations, and deploy with AgentOS. Use when building, debugging, or learning about Agno agents.
+description: Build docs assistants, customer-facing agents, multi-agent teams, and workflows with Agno; serve them over API or MCP and deploy AgentOS in your own cloud. Use when building these use cases with Agno, evaluating Agno for them, or debugging an existing Agno project.
 ---
 
 # Agno Skill
 
-Build production-ready AI agents with Agno - a lightweight, model-agnostic framework for agents, teams, workflows, and MCP integration.
-
-## When to Use This Skill
-
-This skill should be triggered when:
-- Building AI agents with tools, memory, structured outputs, or knowledge
-- Creating multi-agent teams with role-based delegation
-- Implementing workflows with sequential, parallel, conditional, or routing steps
-- Integrating MCP servers (stdio, SSE, or Streamable HTTP)
-- Deploying agents with AgentOS (FastAPI-based runtime)
-- Working with the LearningMachine (user profiles, entity memory, session context)
-- Debugging agent behavior or optimizing performance
-
-## Architecture Overview
-
-```
-Agent          - Single autonomous AI unit (model + tools + instructions)
-Team           - Multiple agents coordinated by a leader (route/broadcast/tasks modes)
-Workflow       - Pipeline-based execution (Step, Parallel, Condition, Loop, Router)
-AgentOS        - FastAPI runtime for deploying agents as production APIs
-LearningMachine - Persistent learning across sessions (profiles, memory, knowledge)
-```
-
-## Quick Reference
-
-### 1. Basic Agent with Tools
-
-```python
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.yfinance import YFinanceTools
-
-agent = Agent(
-    name="Finance Agent",
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-    add_datetime_to_context=True,
-    markdown=True,
-)
-
-agent.print_response("Give me a quick brief on NVIDIA", stream=True)
-```
-
-### 2. Structured Output with Pydantic
-
-```python
-from typing import List, Optional
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.yfinance import YFinanceTools
-from pydantic import BaseModel, Field
-
-class StockAnalysis(BaseModel):
-    ticker: str = Field(..., description="Stock ticker symbol")
-    company_name: str = Field(..., description="Full company name")
-    current_price: float = Field(..., description="Current price in USD")
-    summary: str = Field(..., description="One-line summary")
-    key_drivers: List[str] = Field(..., description="2-3 key growth drivers")
-    recommendation: str = Field(..., description="Buy, Hold, or Sell")
-
-agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-    output_schema=StockAnalysis,
-)
-
-response = agent.run("Analyze NVIDIA")
-analysis: StockAnalysis = response.content
-print(f"{analysis.company_name}: {analysis.recommendation}")
-```
-
-### 3. Agent with Storage (Session Persistence)
-
-```python
-from agno.agent import Agent
-from agno.db.sqlite import SqliteDb
-from agno.models.google import Gemini
-
-agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
-    db=SqliteDb(db_file="tmp/agents.db"),
-    add_history_to_context=True,
-    num_history_runs=5,
-    markdown=True,
-)
-
-# Same session_id = continuous conversation across runs
-agent.print_response("Analyze NVDA", session_id="my-session", stream=True)
-agent.print_response("Compare that to Tesla", session_id="my-session", stream=True)
-```
-
-### 4. Agent with Memory (User Preferences)
-
-```python
-from agno.agent import Agent
-from agno.db.sqlite import SqliteDb
-from agno.memory import MemoryManager
-from agno.models.google import Gemini
-
-db = SqliteDb(db_file="tmp/agents.db")
-
-agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
-    db=db,
-    memory_manager=MemoryManager(
-        model=Gemini(id="gemini-3-flash-preview"),
-        db=db,
-    ),
-    enable_agentic_memory=True,  # Agent decides when to store/recall
-    markdown=True,
-)
-
-# Agent remembers user preferences across sessions
-agent.print_response(
-    "I'm interested in AI stocks. My risk tolerance is moderate.",
-    user_id="alice@example.com",
-    stream=True,
-)
-```
-
-### 5. Multi-Agent Team
-
-```python
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.team.team import Team
-from agno.tools.yfinance import YFinanceTools
-
-bull = Agent(
-    name="Bull Analyst",
-    role="Make the investment case FOR a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-)
-
-bear = Agent(
-    name="Bear Analyst",
-    role="Make the investment case AGAINST a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-)
-
-team = Team(
-    name="Investment Research",
-    model=Gemini(id="gemini-3-flash-preview"),
-    members=[bull, bear],
-    instructions=["Get both perspectives, then synthesize a balanced recommendation"],
-    show_members_responses=True,
-    markdown=True,
-)
-
-team.print_response("Should I invest in NVIDIA?", stream=True)
-```
-
-### 6. Sequential Workflow
-
-```python
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.yfinance import YFinanceTools
-from agno.workflow import Step, Workflow
-
-data_agent = Agent(name="Data Gatherer", model=Gemini(id="gemini-3-flash-preview"), tools=[YFinanceTools()])
-analyst = Agent(name="Analyst", model=Gemini(id="gemini-3-flash-preview"))
-writer = Agent(name="Report Writer", model=Gemini(id="gemini-3-flash-preview"), markdown=True)
-
-workflow = Workflow(
-    name="Research Pipeline",
-    steps=[
-        Step(name="Gather Data", agent=data_agent),
-        Step(name="Analyze", agent=analyst),
-        Step(name="Write Report", agent=writer),
-    ],
-)
-
-workflow.print_response("Analyze NVIDIA for investment", stream=True)
-```
-
-### 7. MCP Server Integration (stdio)
-
-```python
-import asyncio
-from agno.agent import Agent
-from agno.models.anthropic import Claude
-from agno.tools.mcp import MCPTools
-
-async def run_agent(message: str) -> None:
-    async with MCPTools(command="uvx mcp-server-git") as mcp_tools:
-        agent = Agent(model=Claude(id="claude-sonnet-4-5-20250929"), tools=[mcp_tools])
-        await agent.aprint_response(message, stream=True)
-
-asyncio.run(run_agent("What is the license for this project?"))
-```
-
-### 8. MCP Server (Streamable HTTP)
-
-```python
-import asyncio
-from agno.agent import Agent
-from agno.models.anthropic import Claude
-from agno.tools.mcp import MCPTools
-
-async def run_agent(message: str) -> None:
-    async with MCPTools(
-        transport="streamable-http",
-        url="https://docs.agno.com/mcp",
-    ) as mcp_tools:
-        agent = Agent(model=Claude(id="claude-sonnet-4-5-20250929"), tools=[mcp_tools], markdown=True)
-        await agent.aprint_response(message, stream=True)
-
-asyncio.run(run_agent("What is Agno?"))
-```
-
-### 9. Multiple MCP Servers
-
-```python
-import asyncio
-from os import getenv
-from agno.agent import Agent
-from agno.tools.mcp import MultiMCPTools
-
-async def run_agent(message: str) -> None:
-    mcp_tools = MultiMCPTools(
-        commands=["npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt"],
-        urls=["http://localhost:8000/mcp"],
-        urls_transports=["streamable-http"],
-        timeout_seconds=30,
-    )
-    await mcp_tools.connect()
-    agent = Agent(tools=[mcp_tools], markdown=True)
-    await agent.aprint_response(message, stream=True)
-    await mcp_tools.close()
-
-asyncio.run(run_agent("Find listings in Barcelona"))
-```
-
-### 10. LearningMachine (Persistent Learning)
-
-```python
-from agno.agent import Agent
-from agno.db.postgres import PostgresDb
-from agno.learn import LearningMachine, LearningMode, UserProfileConfig
-from agno.models.openai import OpenAIResponses
-
-db = PostgresDb(db_url="postgresql+psycopg://ai:ai@localhost:5532/ai")
-
-agent = Agent(
-    model=OpenAIResponses(id="gpt-5.2"),
-    db=db,
-    learning=LearningMachine(
-        user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),
-    ),
-    markdown=True,
-)
-
-agent.print_response("Hi! I'm Alice, call me Ali.", user_id="alice@example.com", stream=True)
-# Profile fields (name, preferred_name) captured automatically
-```
-
-## Key Patterns
-
-### Pattern: MCP Connection Lifecycle
-Always close MCP connections. Use async context managers or try/finally:
-```python
-# Preferred: context manager
-async with MCPTools(command="uvx mcp-server-git") as tools:
-    agent = Agent(tools=[tools])
-    await agent.aprint_response("query")
-
-# Alternative: manual lifecycle
-tools = MCPTools(command="uvx mcp-server-git")
-await tools.connect()
-try:
-    agent = Agent(tools=[tools])
-    await agent.aprint_response("query")
-finally:
-    await tools.close()
-```
-
-### Pattern: Production Database (PostgreSQL)
-```python
-from agno.db.postgres import PostgresDb
-db = PostgresDb(db_url="postgresql+psycopg://user:pass@localhost:5432/agno")
-agent = Agent(db=db, add_history_to_context=True)
-```
-
-### Pattern: Debug Mode
-```python
-agent = Agent(debug_mode=True)  # Detailed logs of messages, tools, tokens
-```
-
-### Pattern: Custom Tools
-```python
-from agno.tools.decorator import tool
-
-@tool
-def get_weather(city: str) -> str:
-    """Get current weather for a city."""
-    return f"Weather in {city}: 72F, sunny"
-
-agent = Agent(tools=[get_weather])
-```
-
-## Important Rules
-
-- **Never create agents in loops** - reuse agents for performance
-- **Use `output_schema`** for structured responses (not free-form parsing)
-- **PostgreSQL for production**, SQLite only for development
-- **Both sync and async** - all public methods have async variants (prefix with `a`)
-- **Always close MCP connections** - use try/finally or async context managers
-- **Enable `debug_mode=True`** when troubleshooting
-
-## Reference Files
-
-Detailed documentation is available in `references/`:
-
-- **agents.md** - Agent parameters, configuration, tools, memory, knowledge, guardrails
-- **teams.md** - Team modes (route/broadcast/tasks), member coordination
-- **workflows.md** - Step types (Step, Parallel, Condition, Loop, Router)
-- **mcp.md** - MCP integration (stdio, SSE, Streamable HTTP), MultiMCPTools
-- **tools.md** - Built-in tools list, custom tool creation, tool hooks
-- **learning.md** - LearningMachine stores (profile, memory, session, knowledge, entity)
-- **models.md** - Supported model providers and configuration
-
-## Resources
-
-- **Documentation**: https://docs.agno.com
-- **GitHub**: https://github.com/agno-agi/agno
-- **Cookbook Examples**: https://github.com/agno-agi/agno/tree/main/cookbook
-- **Install**: `pip install agno`
+Help the user choose an appropriate Agno path and carry their requested build through to a usable application. Respect their existing framework, project, model provider, and deployment choices.
+
+## Choose the Path
+
+| User request | Start here |
+| --- | --- |
+| "What is Agno?", pricing, or a comparison | Read the relevant page linked from [the website index](https://www.agno.com/llms.txt). Explain fit and tradeoffs. |
+| "Build a docs assistant for my product" | Read [Build with Agno](references/build.md), then its docs-assistant path. |
+| "Put an agent in my product" or "serve an agent as an API" | Read [Build with Agno](references/build.md), then its product-agent path. |
+| "Serve agents to my end users" | Read [Build with Agno](references/build.md), then its identity and isolation guidance. |
+| "Deploy agents to my cloud" or "set up an agent platform" | Read [Build with Agno](references/build.md), then its template setup and deployment guidance. |
+| "Run my existing agents" | Inspect the framework and runtime. Find its integration in [the docs index](https://docs.agno.com/llms.txt); use a supported integration before proposing a rewrite. |
+| Add a capability, debug, or improve existing Agno code | Inspect the project and read only the relevant reference below. |
+
+An SDK-only request can finish with working Python code. Add AgentOS when the user needs a service; add Control Plane connection when they want to manage it there. Do not require deployment, signup, or migration to answer a learning question or make a small SDK change.
+
+## Read Current Sources
+
+- Use the Agno docs MCP server at `https://mcp.agno.com` if available. Client setup is documented in [Add Agno to your Coding Agent](https://docs.agno.com/coding-agents.md).
+- Without MCP, use [docs llms.txt](https://docs.agno.com/llms.txt) and fetch the linked Markdown pages relevant to the task. Follow index links instead of inventing URLs.
+- Inspect the installed or pinned Agno version before using examples. For version-specific behavior, consult the matching release and source rather than assuming the latest docs apply.
+- Read the actual guide, not just its index summary. If it is missing or says "Coming soon", use the relevant SDK/runtime guides and explain the gap.
+- Confirm product claims and pricing from current official pages. Avoid hardcoded provider counts, prices, or claims that one framework always wins.
+
+## Building a Platform
+
+Follow [Build with Agno](references/build.md) for platform setup and use-case builds:
+
+1. Determine the user's use case and delivery surface.
+2. Reuse the existing project or an official deployment template.
+3. Read the template's `AGENTS.md` and relevant setup/build skills, when present.
+4. Build the requested behavior using the project's model, database, and configuration.
+5. Follow the user's rules for running checks; report what actually ran and what remains unverified.
+6. When requested, connect the actual AgentOS URL to the Control Plane and confirm the agent is visible there.
+
+## Architecture
+
+- **Agent**: a model with tools and instructions; attach knowledge, storage, memory, or learning as needed.
+- **Team**: agents working together through an appropriate coordination mode.
+- **Workflow**: explicit steps, branches, loops, or parallel execution.
+- **AgentOS**: serves agents, teams, and workflows through a FastAPI runtime.
+- **Control Plane**: connects to AgentOS for chat, sessions, traces, and management.
+
+## Implementation Guidance
+
+- Use `output_schema` for typed responses when the task needs structured output.
+- Keep per-user history, memory, and mutable tool state separated. AgentOS copies components for core run endpoints, but some resources are shared; inspect the installed version and custom tools before serving concurrent users.
+- Authentication and persistent user isolation are separate choices. For multi-user services, follow the current auth guide and explicitly configure the required identity and isolation behavior.
+- Follow the project's database choice; use a shared persistent database such as PostgreSQL for multiple replicas.
+- Close MCP connections with async context managers or `try/finally`.
+- Use async APIs when the serving path needs them, and enable debug output when it helps diagnose a failure.
+
+## References
+
+Read only what the current task requires:
+
+- [Build with Agno](references/build.md): templates, docs assistants, product agents, deployment, and Control Plane connection.
+- [SDK examples](references/examples.md): starting examples for agents, structured output, storage, memory, teams, workflows, MCP, and learning.
+- [Agents](references/agents.md): configuration, knowledge, memory, sessions, and responses.
+- [Teams](references/teams.md): member coordination and routing.
+- [Workflows](references/workflows.md): steps, branches, loops, and parallel execution.
+- [MCP](references/mcp.md): connecting tools through MCP and managing connection lifecycles.
+- [Tools](references/tools.md): built-in and custom tools.
+- [Learning](references/learning.md): profiles, memory, entities, and session context.
+- [Models](references/models.md): provider configuration; check current docs for availability.
+
+For implementation details beyond these references, use the [official cookbook](https://github.com/agno-agi/agno/tree/main/cookbook) matching the project's version.

@@ -1,16 +1,23 @@
 # Agno Skills
 
-Official [Agno](https://github.com/agno-agi/agno) skills for Claude Code. Provides comprehensive knowledge of the Agno framework for building production-ready agents, teams, workflows, and MCP integrations.
+Official [Agno](https://github.com/agno-agi/agno) skill for coding agents. Routes docs-assistant, product-agent, and deployment requests to current guides and templates, with SDK examples and references for implementation.
 
 ## What's Included
 
-- **Accurate code examples** pulled from the official cookbook
-- **API reference** for Agent, Team, Workflow, MCP, Tools, Learning, and Models
-- **Best practices** and common patterns
-- **120+ built-in tools** reference
-- **40+ model providers** reference
+- **Build guidance** for setup, docs assistants, product agents, deployment, and Control Plane connection
+- **SDK examples** for agents, teams, workflows, MCP, memory, and learning
+- **Focused references** for APIs, tools, models, and implementation patterns
+- **Current-source routing** through the Agno docs MCP server and Markdown indexes
 
 ## Install
+
+Install through [skills.sh](https://skills.sh/agno-agi/agno-skills/agno) for supported coding agents:
+
+```bash
+npx skills add https://github.com/agno-agi/agno-skills --skill agno
+```
+
+### Claude Code Plugin
 
 ```bash
 # Add the marketplace
@@ -38,7 +45,10 @@ cp -r plugins/agno/skills/agno ~/.claude/skills/agno
 
 Once installed, the skill activates automatically when you:
 
-- Ask about building Agno agents
+- Build a docs assistant or customer-facing agent with Agno
+- Serve an Agno agent over API or MCP
+- Set up or deploy an AgentOS platform
+- Evaluate Agno for one of these use cases
 - Write code using `agno.*` imports
 - Debug agent, team, or workflow issues
 - Set up MCP server connections
@@ -52,17 +62,19 @@ You can also invoke it directly:
 
 ## Structure
 
-```
+```text
 plugins/agno/skills/agno/
-├── SKILL.md                    # Main skill (10 examples + patterns)
+├── SKILL.md                    # Request routing and essential guidance
 └── references/
+    ├── build.md                # Setup, use cases, deployment, Control Plane
+    ├── examples.md             # SDK examples and patterns
     ├── agents.md               # Agent API reference
-    ├── teams.md                # Team modes and coordination
-    ├── workflows.md            # Step types (Step, Parallel, Condition, Loop, Router)
-    ├── mcp.md                  # MCP integration (stdio, SSE, Streamable HTTP)
-    ├── tools.md                # 120+ built-in tools + custom tool creation
-    ├── learning.md             # LearningMachine (profiles, memory, entities)
-    └── models.md               # 40+ model providers
+    ├── teams.md                # Team coordination
+    ├── workflows.md            # Workflow steps and patterns
+    ├── mcp.md                  # MCP clients and connection lifecycle
+    ├── tools.md                # Built-in and custom tools
+    ├── learning.md             # LearningMachine stores
+    └── models.md               # Provider configuration
 ```
 
 ## Updating
