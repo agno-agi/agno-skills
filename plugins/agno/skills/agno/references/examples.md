@@ -1,284 +1,116 @@
 # SDK Examples and Patterns
 
-Read only the examples relevant to the task. These are starting points; confirm APIs and model availability against the project's Agno version and current documentation before using them.
+Use these small examples for SDK-only tasks. Add a service only when needed; see [AgentOS](agentos.md) and [Build with Agno](build.md).
 
-## Quick Reference
+## Prerequisites
 
-### 1. Basic Agent with Tools
+- Use the project's virtual environment and inspect its pinned Agno version. For example: `python -c "from importlib.metadata import version; print(version('agno'))"`.
+- These examples use the Agno 3.1.1 API. Check the [release notes](https://github.com/agno-agi/agno/releases) before adapting older projects.
+- For a new environment, install `uv pip install "agno[openai,sqlite]"`. Keep an existing project's dependency pins.
+- Model execution needs `OPENAI_API_KEY`, network access, and access to the selected model. Construction alone does not need a key. The examples use `OpenAIResponses(id="gpt-5.6-luna")`; confirm model availability for your account.
+- Retain the user's provider and model when adapting these examples. See [Models](models.md) for adapter and capability checks.
 
-```python
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.yfinance import YFinanceTools
+Each Python block is a separate script. Importing it constructs the agent but does not call a model. Reuse agents; do not create them inside request loops.
 
-agent = Agent(
-    name="Finance Agent",
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-    add_datetime_to_context=True,
-    markdown=True,
-)
-
-agent.print_response("Give me a quick brief on NVIDIA", stream=True)
-```
-
-### 2. Structured Output with Pydantic
-
-```python
-from typing import List, Optional
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.yfinance import YFinanceTools
-from pydantic import BaseModel, Field
-
-class StockAnalysis(BaseModel):
-    ticker: str = Field(..., description="Stock ticker symbol")
-    company_name: str = Field(..., description="Full company name")
-    current_price: float = Field(..., description="Current price in USD")
-    summary: str = Field(..., description="One-line summary")
-    key_drivers: List[str] = Field(..., description="2-3 key growth drivers")
-    recommendation: str = Field(..., description="Buy, Hold, or Sell")
-
-agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-    output_schema=StockAnalysis,
-)
-
-response = agent.run("Analyze NVIDIA")
-analysis: StockAnalysis = response.content
-print(f"{analysis.company_name}: {analysis.recommendation}")
-```
-
-### 3. Agent with Storage (Session Persistence)
+## 1. Small Agent
 
 ```python
 from agno.agent import Agent
-from agno.db.sqlite import SqliteDb
-from agno.models.google import Gemini
-
-agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
-    db=SqliteDb(db_file="tmp/agents.db"),
-    add_history_to_context=True,
-    num_history_runs=5,
-    markdown=True,
-)
-
-# Same session_id = continuous conversation across runs
-agent.print_response("Analyze NVDA", session_id="my-session", stream=True)
-agent.print_response("Compare that to Tesla", session_id="my-session", stream=True)
-```
-
-### 4. Agent with Memory (User Preferences)
-
-```python
-from agno.agent import Agent
-from agno.db.sqlite import SqliteDb
-from agno.memory import MemoryManager
-from agno.models.google import Gemini
-
-db = SqliteDb(db_file="tmp/agents.db")
-
-agent = Agent(
-    model=Gemini(id="gemini-3-flash-preview"),
-    db=db,
-    memory_manager=MemoryManager(
-        model=Gemini(id="gemini-3-flash-preview"),
-        db=db,
-    ),
-    enable_agentic_memory=True,  # Agent decides when to store/recall
-    markdown=True,
-)
-
-# Agent remembers user preferences across sessions
-agent.print_response(
-    "I'm interested in AI stocks. My risk tolerance is moderate.",
-    user_id="alice@example.com",
-    stream=True,
-)
-```
-
-### 5. Multi-Agent Team
-
-```python
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.team.team import Team
-from agno.tools.yfinance import YFinanceTools
-
-bull = Agent(
-    name="Bull Analyst",
-    role="Make the investment case FOR a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-)
-
-bear = Agent(
-    name="Bear Analyst",
-    role="Make the investment case AGAINST a stock",
-    model=Gemini(id="gemini-3-flash-preview"),
-    tools=[YFinanceTools()],
-)
-
-team = Team(
-    name="Investment Research",
-    model=Gemini(id="gemini-3-flash-preview"),
-    members=[bull, bear],
-    instructions=["Get both perspectives, then synthesize a balanced recommendation"],
-    show_members_responses=True,
-    markdown=True,
-)
-
-team.print_response("Should I invest in NVIDIA?", stream=True)
-```
-
-### 6. Sequential Workflow
-
-```python
-from agno.agent import Agent
-from agno.models.google import Gemini
-from agno.tools.yfinance import YFinanceTools
-from agno.workflow import Step, Workflow
-
-data_agent = Agent(name="Data Gatherer", model=Gemini(id="gemini-3-flash-preview"), tools=[YFinanceTools()])
-analyst = Agent(name="Analyst", model=Gemini(id="gemini-3-flash-preview"))
-writer = Agent(name="Report Writer", model=Gemini(id="gemini-3-flash-preview"), markdown=True)
-
-workflow = Workflow(
-    name="Research Pipeline",
-    steps=[
-        Step(name="Gather Data", agent=data_agent),
-        Step(name="Analyze", agent=analyst),
-        Step(name="Write Report", agent=writer),
-    ],
-)
-
-workflow.print_response("Analyze NVIDIA for investment", stream=True)
-```
-
-### 7. MCP Server Integration (stdio)
-
-```python
-import asyncio
-from agno.agent import Agent
-from agno.models.anthropic import Claude
-from agno.tools.mcp import MCPTools
-
-async def run_agent(message: str) -> None:
-    async with MCPTools(command="uvx mcp-server-git") as mcp_tools:
-        agent = Agent(model=Claude(id="claude-sonnet-4-5-20250929"), tools=[mcp_tools])
-        await agent.aprint_response(message, stream=True)
-
-asyncio.run(run_agent("What is the license for this project?"))
-```
-
-### 8. MCP Server (Streamable HTTP)
-
-```python
-import asyncio
-from agno.agent import Agent
-from agno.models.anthropic import Claude
-from agno.tools.mcp import MCPTools
-
-async def run_agent(message: str) -> None:
-    async with MCPTools(
-        transport="streamable-http",
-        url="https://mcp.agno.com",
-    ) as mcp_tools:
-        agent = Agent(model=Claude(id="claude-sonnet-4-5-20250929"), tools=[mcp_tools], markdown=True)
-        await agent.aprint_response(message, stream=True)
-
-asyncio.run(run_agent("What is Agno?"))
-```
-
-### 9. Multiple MCP Servers
-
-```python
-import asyncio
-from os import getenv
-from agno.agent import Agent
-from agno.tools.mcp import MultiMCPTools
-
-async def run_agent(message: str) -> None:
-    mcp_tools = MultiMCPTools(
-        commands=["npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt"],
-        urls=["http://localhost:8000/mcp"],
-        urls_transports=["streamable-http"],
-        timeout_seconds=30,
-    )
-    await mcp_tools.connect()
-    agent = Agent(tools=[mcp_tools], markdown=True)
-    await agent.aprint_response(message, stream=True)
-    await mcp_tools.close()
-
-asyncio.run(run_agent("Find listings in Barcelona"))
-```
-
-### 10. LearningMachine (Persistent Learning)
-
-```python
-from agno.agent import Agent
-from agno.db.postgres import PostgresDb
-from agno.learn import LearningMachine, LearningMode, UserProfileConfig
 from agno.models.openai import OpenAIResponses
 
-db = PostgresDb(db_url="postgresql+psycopg://ai:ai@localhost:5532/ai")
-
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.2"),
-    db=db,
-    learning=LearningMachine(
-        user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),
-    ),
+    name="Support Assistant",
+    model=OpenAIResponses(id="gpt-5.6-luna"),
+    instructions=[
+        "Answer the user's question directly.",
+        "State when you do not know; do not invent product policies.",
+    ],
     markdown=True,
 )
 
-agent.print_response("Hi! I'm Alice, call me Ali.", user_id="alice@example.com", stream=True)
-# Profile fields (name, preferred_name) captured automatically
+if __name__ == "__main__":
+    agent.print_response(
+        "Explain the difference between a session and a run.", stream=True
+    )
 ```
 
-## Key Patterns
+`print_response()` is a console helper. Use `run()` when application code needs the result, or `arun()` in an async path. See [Agents](agents.md) for return types and streaming.
 
-### Pattern: MCP Connection Lifecycle
-Always close MCP connections. Use async context managers or try/finally:
+## 2. Typed Extraction
+
+No search service is needed: the input contains all the facts.
+
 ```python
-# Preferred: context manager
-async with MCPTools(command="uvx mcp-server-git") as tools:
-    agent = Agent(tools=[tools])
-    await agent.aprint_response("query")
+from typing import Literal
 
-# Alternative: manual lifecycle
-tools = MCPTools(command="uvx mcp-server-git")
-await tools.connect()
-try:
-    agent = Agent(tools=[tools])
-    await agent.aprint_response("query")
-finally:
-    await tools.close()
+from agno.agent import Agent
+from agno.models.openai import OpenAIResponses
+from pydantic import BaseModel, Field
+
+
+class Ticket(BaseModel):
+    category: Literal["billing", "access", "other"]
+    summary: str = Field(description="One sentence based only on the supplied text")
+
+
+agent = Agent(
+    model=OpenAIResponses(id="gpt-5.6-luna"),
+    output_schema=Ticket,
+    instructions="Classify the supplied support request. Do not add facts.",
+)
+
+if __name__ == "__main__":
+    response = agent.run("I was charged twice for my subscription.")
+    if not isinstance(response.content, Ticket):
+        raise ValueError("The run did not return a valid Ticket")
+    print(response.content.model_dump_json())
 ```
 
-### Pattern: Production Database (PostgreSQL)
+Use `output_schema`, not prompt-only JSON instructions. Native structured output depends on the adapter and model. Parsing failures can leave text in `content`; a type annotation alone does not validate it. See the [structured-output guide](https://docs.agno.com/input-output/structured-output/agent.md).
+
+## 3. Persist a Conversation
+
+This local demo needs a writable working directory. It creates `agno-demo.db` when run. For a deployed service, use the project's shared persistent database, usually PostgreSQL.
+
 ```python
-from agno.db.postgres import PostgresDb
-db = PostgresDb(db_url="postgresql+psycopg://user:pass@localhost:5432/agno")
-agent = Agent(db=db, add_history_to_context=True)
+from agno.agent import Agent
+from agno.db.sqlite import SqliteDb
+from agno.models.openai import OpenAIResponses
+
+agent = Agent(
+    id="support-demo",
+    model=OpenAIResponses(id="gpt-5.6-luna"),
+    db=SqliteDb(db_file="agno-demo.db"),
+    add_history_to_context=True,
+    num_history_runs=3,
+)
+
+if __name__ == "__main__":
+    agent.print_response(
+        "I am evaluating the team plan.",
+        user_id="demo-user",
+        session_id="plan-evaluation",
+    )
+    agent.print_response(
+        "Which plan did I mention?",
+        user_id="demo-user",
+        session_id="plan-evaluation",
+    )
 ```
 
-### Pattern: Debug Mode
-```python
-agent = Agent(debug_mode=True)  # Detailed logs of messages, tools, tokens
-```
+Reuse the same session ID for a continuing conversation. Start a new one for a separate conversation. IDs are not authentication: a service must derive and authorize them from the caller, not trust client-selected IDs. History is not cross-session user memory; see [Learning](learning.md).
 
-### Pattern: Custom Tools
-```python
-from agno.tools.decorator import tool
+## Next Task
 
-@tool
-def get_weather(city: str) -> str:
-    """Get current weather for a city."""
-    return f"Weather in {city}: 72F, sunny"
+| Need | Read |
+| --- | --- |
+| Async execution, streaming events, context, or media | [Agents](agents.md) |
+| Custom tools, approvals, or tool filtering | [Tools](tools.md) |
+| Search your documents or build a docs assistant | [Knowledge](knowledge.md), then [Build with Agno](build.md) |
+| Persistent user profiles and memories | [Learning](learning.md) |
+| Multiple specialists | [Teams](teams.md) |
+| Explicit steps, branches, loops, or parallel work | [Workflows](workflows.md) |
+| External MCP tools and connection cleanup | [MCP](mcp.md) |
+| Serve runs over an API | [AgentOS](agentos.md) |
 
-agent = Agent(tools=[get_weather])
-```
-
+For a new feature, read its current guide through the [docs index](https://docs.agno.com/llms.txt). Do not copy an unrelated cookbook's dependencies or provider choices.
