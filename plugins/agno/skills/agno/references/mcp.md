@@ -28,7 +28,7 @@ async def main():
         timeout_seconds=30,
     ) as docs_tools:
         agent = Agent(
-            model=OpenAIResponses(id="gpt-5.6-luna"),
+            model=OpenAIResponses(id="gpt-6.1-sol"),
             tools=[docs_tools],
         )
         await agent.aprint_response("How do Agno workflows work?", stream=True)
@@ -71,7 +71,7 @@ from agno.os import AgentOS, MCPConfig
 db = SqliteDb(db_file="tmp/mcp.db")
 assistant = Agent(
     id="assistant",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     db=db,
 )
 agent_os = AgentOS(

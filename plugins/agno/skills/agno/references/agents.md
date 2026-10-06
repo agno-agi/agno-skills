@@ -30,7 +30,7 @@ from agno.agent import Agent
 from agno.models.openai import OpenAIResponses
 from agno.run.agent import RunEvent
 
-agent = Agent(model=OpenAIResponses(id="gpt-5.6-luna"))
+agent = Agent(model=OpenAIResponses(id="gpt-6.1-sol"))
 
 
 def stream_answer(message: str) -> None:

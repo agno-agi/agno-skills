@@ -14,7 +14,7 @@ from agno.models.openai import OpenAIResponses
 from agno.workflow import Step, StepInput, StepOutput, Workflow
 
 writer = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     instructions="Write concise release notes using only the supplied facts.",
 )
 

@@ -27,7 +27,7 @@ def lookup_demo_policy(topic: str) -> str:
 
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     tools=[lookup_demo_policy],
     instructions="Use the demo policy tool. Label its answer as a fictional policy.",
     tool_call_limit=3,
@@ -95,7 +95,7 @@ def send_demo_message(recipient: str, text: str) -> str:
 
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     tools=[send_demo_message],
 )
 

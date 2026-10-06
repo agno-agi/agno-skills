@@ -7,7 +7,7 @@ Use these small examples for SDK-only tasks. Add a service only when needed; see
 - Use the project's virtual environment and inspect its pinned Agno version. For example: `python -c "from importlib.metadata import version; print(version('agno'))"`.
 - These examples use the Agno 3.1.1 API. Check the [release notes](https://github.com/agno-agi/agno/releases) before adapting older projects.
 - For a new environment, install `uv pip install "agno[openai,sqlite]"`. Keep an existing project's dependency pins.
-- Model execution needs `OPENAI_API_KEY`, network access, and access to the selected model. Construction alone does not need a key. The examples use `OpenAIResponses(id="gpt-5.6-luna")`; confirm model availability for your account.
+- Model execution needs `OPENAI_API_KEY`, network access, and access to the selected model. Construction alone does not need a key. The examples use `OpenAIResponses(id="gpt-6.1-sol")`; confirm model availability for your account.
 - Retain the user's provider and model when adapting these examples. See [Models](models.md) for adapter and capability checks.
 
 Each Python block is a separate script. Importing it constructs the agent but does not call a model. Reuse agents; do not create them inside request loops.
@@ -20,7 +20,7 @@ from agno.models.openai import OpenAIResponses
 
 agent = Agent(
     name="Support Assistant",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     instructions=[
         "Answer the user's question directly.",
         "State when you do not know; do not invent product policies.",
@@ -54,7 +54,7 @@ class Ticket(BaseModel):
 
 
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     output_schema=Ticket,
     instructions="Classify the supplied support request. Do not add facts.",
 )
@@ -79,7 +79,7 @@ from agno.models.openai import OpenAIResponses
 
 agent = Agent(
     id="support-demo",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     db=SqliteDb(db_file="agno-demo.db"),
     add_history_to_context=True,
     num_history_runs=3,

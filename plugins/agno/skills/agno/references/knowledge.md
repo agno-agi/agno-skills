@@ -39,7 +39,7 @@ knowledge = Knowledge(
     ),
 )
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     knowledge=knowledge,
     search_knowledge=True,
     instructions=[

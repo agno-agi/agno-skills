@@ -11,7 +11,7 @@ from agno.agent import Agent
 from agno.models.openai import OpenAIResponses
 
 model = OpenAIResponses(
-    id="gpt-5.6-luna",
+    id="gpt-6.1-sol",
     max_output_tokens=1024,
     timeout=30.0,
 )

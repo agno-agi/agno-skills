@@ -15,7 +15,7 @@ from agno.os import AgentOS
 db = SqliteDb(db_file="tmp/agentos.db")
 assistant = Agent(
     id="assistant",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     db=db,
     add_history_to_context=True,
     num_history_runs=3,

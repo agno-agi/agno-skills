@@ -35,17 +35,17 @@ writer = Agent(
     id="release-writer",
     name="Writer",
     role="Draft release notes from the supplied facts.",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
 )
 reviewer = Agent(
     id="release-reviewer",
     name="Reviewer",
     role="Find unsupported claims and unclear rollout guidance.",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
 )
 team = Team(
     name="Release Review",
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     members=[writer, reviewer],
     mode=TeamMode.coordinate,
     instructions=[
@@ -74,7 +74,7 @@ Configuration fragments. Reuse `writer`, `reviewer`, and the imports above. Cons
 
 ```python
 router = Team(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     members=[writer, reviewer],
     mode=TeamMode.route,
     determine_input_for_members=False,  # Pass user-message content unchanged.
@@ -82,14 +82,14 @@ router = Team(
 )
 
 review_team = Team(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     members=[writer, reviewer],
     mode=TeamMode.broadcast,
     instructions="Delegate to both members and combine their recommendations.",
 )
 
 task_team = Team(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     members=[writer, reviewer],
     mode=TeamMode.tasks,
     max_iterations=6,

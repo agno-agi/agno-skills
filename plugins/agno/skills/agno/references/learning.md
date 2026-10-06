@@ -40,7 +40,7 @@ from agno.models.openai import OpenAIResponses
 # learning=True enables only user profile and user memory, both in ALWAYS mode.
 db = SqliteDb(db_file="tmp/learning.db")
 agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     db=db,
     learning=True,
     instructions="Use relevant saved preferences, but do not invent missing facts.",
@@ -89,7 +89,7 @@ from agno.learn import (
 )
 
 configured_agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     db=db,
     learning=LearningMachine(
         user_profile=UserProfileConfig(mode=LearningMode.ALWAYS),
@@ -117,7 +117,7 @@ Configuration fragment. Reuses the first example's imports and `db`, and require
 from agno.learn import LearnedKnowledgeConfig, LearningMachine, LearningMode
 
 knowledge_agent = Agent(
-    model=OpenAIResponses(id="gpt-5.6-luna"),
+    model=OpenAIResponses(id="gpt-6.1-sol"),
     db=db,
     learning=LearningMachine(
         knowledge=knowledge,
