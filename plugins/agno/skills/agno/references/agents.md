@@ -1,10 +1,10 @@
 # Agent Reference
 
-Start with the runnable [SDK examples](examples.md). Keep the project's model and database choices. Construct an agent once and reuse it.
+Start with the [SDK examples](examples.md). Keep the project's model/database choices and reuse agents.
 
 ## Choose the Run API
 
-These forms assume the normal foreground execution path:
+Foreground execution:
 
 | Need | Call | Result |
 | --- | --- | --- |
@@ -15,15 +15,13 @@ These forms assume the normal foreground execution path:
 | Console output | `agent.print_response(message, stream=True)` | Prints the response |
 | Async console output | `await agent.aprint_response(message, stream=True)` | Prints the response |
 
-Put async calls inside an `async def`. Use `asyncio.run(main())` at a script entry point, but not inside an already running event loop. Async tools and MCP connections belong on the async path; an `arun()` call alone does not make blocking custom I/O nonblocking.
+Put async calls inside `async def`. Use `asyncio.run(main())` at script entry, not inside an existing event loop. Async tools and MCP need the [async tool path](tools.md#sync-and-async-toolkits).
 
-A non-streaming result exposes `content`, `run_id`, `session_id`, `status`, `is_paused`, `messages`, and `metrics`. Check status or pending requirements before treating a run as complete. `messages` contains the messages retained for that run, not necessarily the full stored conversation. With a Pydantic `output_schema`, check the type of `content` before accessing fields.
-
-See [Running Agents](https://docs.agno.com/agents/running-agents.md) and the [RunOutput reference](https://docs.agno.com/reference/agents/run-response.md).
+Check `status` and pending requirements before treating a `RunOutput` as complete. `messages` contains retained run messages, not necessarily full conversation history. Check structured `content` types before accessing fields. See [Running Agents](https://docs.agno.com/agents/running-agents.md) and [RunOutput](https://docs.agno.com/reference/agents/run-response.md) for fields.
 
 ## Stream Text and Observe Events
 
-Prerequisites: `agno` and `openai`. Construction is offline; calling either function needs `OPENAI_API_KEY` and model access. Both functions reuse one agent.
+Requires `agno` and `openai`; function calls need `OPENAI_API_KEY` and model access. Construction is offline.
 
 ```python
 from agno.agent import Agent
@@ -57,51 +55,49 @@ async def astream_answer(message: str) -> None:
             print(event.event)
 ```
 
-`stream_events=True` adds lifecycle and tool events. Even without it, a stream can contain pause, cancellation, or error events; not every item has text. This example only renders output. A service must handle those outcomes, resume approved runs, and avoid declaring success after cancellation. Do not parse individual text deltas as completed structured output.
+`stream_events=True` adds lifecycle/tool events. Pause, cancellation, and error events can appear without it. This example only renders output; services must handle those outcomes. A terminal event after cancellation is not success. Text deltas are not completed structured output.
 
 ## Configure Only What the Task Needs
 
 | Task | Agent settings |
 | --- | --- |
-| Identity | `name`, stable `id`; pass `user_id` and `session_id` per run in multi-user code |
-| Behavior | `description`, `instructions`, `expected_output`, `markdown` |
-| Typed input/output | `input_schema`, `output_schema`; see [typed extraction](examples.md#2-typed-extraction) |
-| Tools | `tools`, `tool_call_limit`, provider-supported `tool_choice`; see [Tools](tools.md) |
-| Pre/post processing | `pre_hooks`, `post_hooks`; validate inputs and outputs with [guardrails](https://docs.agno.com/guardrails/overview.md) |
-| Recovery | `retries`, `delay_between_retries`, `exponential_backoff`; make side-effecting tools idempotent before retrying |
-| Diagnosis | `debug_mode=True` while debugging; logs can contain prompts and tool data |
+| Identity | Stable `id`; caller-scoped `user_id` and `session_id` per run |
+| Behavior | `description`, `instructions`, `markdown` |
+| Typed input/output | `input_schema`, `output_schema`; [typed extraction](examples.md#2-typed-extraction) |
+| Tools | `tools`, `tool_call_limit`, provider-supported `tool_choice`; [Tools](tools.md) |
+| Validation | `pre_hooks`, `post_hooks`; [guardrails](https://docs.agno.com/guardrails/overview.md) |
 
-An explicit `system_message` replaces the normal generated system message. Prefer `instructions` when you want Agno to assemble context from the other settings. Configure native reasoning on the selected model adapter; use `reasoning_model` only when a separate reasoning model is needed. Do not copy obsolete reasoning flags from an older Agno release.
+An explicit `system_message` replaces the generated message; prefer `instructions` to retain assembled context. Configure native reasoning on the model adapter; `reasoning_model` selects a separate model. Debug logs can expose prompts and tool data.
 
 ## History, Memory, State, and Knowledge Are Different
 
 | Need | Configuration and constraints |
 | --- | --- |
 | Continue one conversation | `db`, `add_history_to_context=True`, bounded `num_history_runs` or `num_history_messages`; keep the session ID stable |
-| Recall facts across a user's sessions | Legacy `MemoryManager` with `enable_agentic_memory=True` or `update_memory_on_run=True`, or a configured [LearningMachine](learning.md). Model-driven extraction is not guaranteed and can add model calls. |
-| Track application state | `session_state`; opt into prompt exposure with `add_session_state_to_context=True`. Tools can read/update the current run's injected `RunContext`. |
-| Supply runtime services or data | `dependencies`; access current values through `run_context.dependencies`. Only enable `add_dependencies_to_context` for data safe to send to the model. |
-| Search documents on demand | Attach a configured `Knowledge` and enable `search_knowledge=True` to expose a retrieval tool. See [Knowledge](knowledge.md). |
-| Inject retrieved documents each run | `add_knowledge_to_context=True` with configured knowledge/retrieval; this differs from model-selected search. |
+| Recall facts across sessions | Configure [LearningMachine](learning.md) or legacy memory; extraction can miss facts and add model calls |
+| Track application state | `session_state`; tools use injected `RunContext`. `add_session_state_to_context=True` exposes state to the model |
+| Supply runtime services/data | `dependencies`; tools read `run_context.dependencies`. Expose only safe data via `add_dependencies_to_context` |
+| Search documents on demand | Configured `Knowledge` with `search_knowledge=True` exposes retrieval; see [Knowledge](knowledge.md) |
+| Retrieve documents each run | `add_knowledge_to_context=True` with configured knowledge/retrieval |
 
-Persisted sessions require a database. Bound history before adding more context. `max_tool_calls_from_history` can reduce historical tool exchanges without deleting stored history. Session summaries and `compress_tool_results=True` can reduce prompt size but may add model calls and lose detail. Do not combine tool-result compression with `offload_tool_results`; choose one strategy. See [context engineering](https://docs.agno.com/context/agent/overview.md).
+`max_tool_calls_from_history` trims prompt history, not stored history. Summaries and `compress_tool_results=True` can reduce context but add model calls and lose detail. Do not combine compression with `offload_tool_results`. See [context engineering](https://docs.agno.com/context/agent/overview.md).
 
-Do not enable legacy agentic memory together with a LearningMachine `user_memory` store: both register an `update_user_memory` tool. Pick one owner for user memory. Shared mutable tools, credentials, and databases also need caller isolation; a `user_id` string alone is not an authorization boundary.
+Legacy agentic memory and LearningMachine `user_memory` both register `update_user_memory`; choose one. Isolate shared tools, credentials, and databases by caller. IDs alone do not authorize access.
 
 ## Add Context without a Large Tool List
 
-- **Context Providers** expose a focused interface over an external source. After configuration, pass `tools=provider.get_tools()` and `instructions=provider.instructions()`. Provision source credentials and scope access in the application. For resource-owning providers, follow their async setup/close lifecycle. See [using providers](https://docs.agno.com/context-providers/using-providers.md).
-- **Skills** package reusable instructions, references, and scripts. Load trusted local skills with `Skills` and `LocalSkills` from `agno.skills`, then pass `skills=...`. Verify that the intended skills loaded; scripts can execute code. See [loading skills](https://docs.agno.com/skills/loading-skills.md).
-- **Durable FileSystem** stores agent files in a database; it is not unrestricted access to host files. See [FileSystem](https://docs.agno.com/filesystem/overview.md) for user scoping, read-only tools, and migration requirements.
+- **[Context Providers](https://docs.agno.com/context-providers/using-providers.md):** pass `tools=provider.get_tools()` and `instructions=provider.instructions()`. Scope source credentials; follow resource-owning providers' async setup/close lifecycle.
+- **[Skills](https://docs.agno.com/skills/loading-skills.md):** load trusted instructions/references/scripts with `Skills` and `LocalSkills` from `agno.skills`, then pass `skills=...`. Verify loading; scripts can execute code.
+- **[FileSystem](https://docs.agno.com/filesystem/overview.md):** durable agent text on database or local-disk backends, not unrestricted host access. Check installed-version scoping and migration requirements.
 
 ## Media Inputs
 
-`run()` and `arun()` accept `images`, `audio`, `videos`, and `files` using `Image`, `Audio`, `Video`, and `File` from `agno.media`. Supply a real accessible URL, local path, or supported content value. The model adapter and selected model must both support that modality; not every model accepts every input type. See [model compatibility](https://docs.agno.com/models/compatibility.md).
+For `run()` / `arun()`, pass `images`, `audio`, `videos`, or `files` with `Image`, `Audio`, `Video`, or `File` from `agno.media`. Use accessible URLs, paths, or supported content. Verify the [adapter and model support the modality](https://docs.agno.com/models/compatibility.md).
 
 ## Pause, Resume, or Serve
 
-- For human approval, inspect `active_requirements` on a paused result and call `continue_run()` or `acontinue_run()` with the decisions. See the [approval example](tools.md#approve-before-a-tool-runs).
-- Use `cancel_run(run_id)` / `acancel_run(run_id)` for cancellation; do not assume this reverses external side effects.
-- For HTTP serving, background work, durable execution, and authentication, use [AgentOS](agentos.md). An async SDK run is not automatically a durable job.
+- Resolve paused `active_requirements`, then use `continue_run()` / `acontinue_run()`; see [approval](tools.md#approve-before-a-tool-runs).
+- `cancel_run(run_id)` / `acancel_run(run_id)` do not reverse external side effects.
+- See [AgentOS](agentos.md) for HTTP, authentication, and durable work. Async runs are not automatically durable.
 
-Check uncommon parameters in the version-matched [Agent reference](https://docs.agno.com/reference/agents/agent.md), not an old constructor copied wholesale.
+Check uncommon settings in the version-matched [Agent reference](https://docs.agno.com/reference/agents/agent.md).

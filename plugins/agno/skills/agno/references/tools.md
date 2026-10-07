@@ -1,10 +1,10 @@
 # Tools Reference
 
-Give the agent only the tools needed for the task. Use plain typed Python functions for simple tools, `@tool` for behavior controls, and `Toolkit` for a related group. Keep credentials and authorization in application code, not model-generated arguments.
+Expose only needed tools: typed functions for simple calls, `@tool` for controls, `Toolkit` for related operations. Keep credentials and authorization outside model-generated arguments.
 
 ## A Small Custom Tool
 
-Prerequisites: `agno` and `openai`. The tool below is a local demo, not a live policy service. Agent construction is offline; execution needs `OPENAI_API_KEY` and model access.
+Requires `agno` and `openai`. This fictional local policy tool is offline; model execution needs `OPENAI_API_KEY` and model access.
 
 ```python
 from agno.agent import Agent
@@ -37,13 +37,13 @@ if __name__ == "__main__":
     agent.print_response("What is the demo refund policy?")
 ```
 
-Type annotations define tool inputs; docstrings tell the model when to call the tool. Validate inputs and source permissions inside the tool. Return bounded, useful results rather than an entire database or API payload.
+Type annotations define inputs; docstrings guide tool selection. Validate inputs and source permissions inside tools. Return bounded results.
 
 ## Sync and Async Toolkits
 
-Register paired implementations with the same model-visible name. `run()` uses the sync function; `arun()` uses its registered async variant. Async runs can also use sync tools, but that is not a promise that arbitrary blocking work will be nonblocking. Use async clients for network I/O and test the actual tool path.
+Register pairs under the same model-visible name. `run()` uses sync; `arun()` prefers the registered async variant. Sync fallback does not guarantee nonblocking I/O. Use async clients and test the tool path.
 
-This example needs `httpx`. Construction does not access the network. Before calling the tool, configure an authorized service URL whose `/health` endpoint returns text.
+Requires `httpx`; construction is offline. Tool calls need an authorized service URL with a text `/health` response.
 
 ```python
 import httpx
@@ -74,13 +74,13 @@ class HealthTools(Toolkit):
             return response.text[:2000]
 ```
 
-Pass a configured `HealthTools` instance in `Agent(tools=[...])`. A standalone `async def` can also be a tool; run it through `arun()` / `aprint_response()`. Keep resource lifetimes inside the same async context. For MCP connection management, see [MCP](mcp.md).
+Pass `HealthTools(base_url=...)` in `Agent(tools=[...])`. Standalone `async def` tools also need `arun()` / `aprint_response()`. Keep resources within one async lifecycle; see [MCP](mcp.md).
 
 ## Approve before a Tool Runs
 
-`requires_confirmation=True` pauses a run; it does not create an approval UI or grant authorization. Show the actual tool name and arguments to the approver. Confirm or reject each pending requirement, then continue the same run. A continuation can pause again.
+`requires_confirmation=True` pauses, but supplies neither approval UI nor authorization. Show actual tool names/arguments; resolve every requirement before continuing. A continuation can pause again.
 
-This complete console demo uses no real messaging service. Imports and construction need no key; running it needs the same model prerequisites as above.
+This console demo sends nothing. Import/construction need no key; execution needs the model prerequisites above.
 
 ```python
 from agno.agent import Agent
@@ -115,21 +115,21 @@ if __name__ == "__main__":
     print(response.content)
 ```
 
-For async code, use `await agent.arun(...)` and `await agent.acontinue_run(run_response=response)` inside an async function. Replace blocking console input with your application's approval channel. To resume by `run_id` after a restart, configure a persistent `db`, retain the `session_id`, and authorize access to the stored run and requirements.
+Inside async functions, use `await agent.arun(...)` and `await agent.acontinue_run(run_response=response)`. Replace blocking input with an approval channel. Resuming by `run_id` after restart needs persistent `db`, retained `session_id`, and caller authorization.
 
-Other pause modes are `requires_user_input=True` with `user_input_fields`, or `external_execution=True` for execution outside Agno. A tool can select only one of these modes or confirmation. See [human confirmation](https://docs.agno.com/hitl/user-confirmation.md) and the [HITL guide](https://docs.agno.com/hitl/overview.md).
+Confirmation, `requires_user_input=True` with `user_input_fields`, and `external_execution=True` are mutually exclusive per tool. See [confirmation](https://docs.agno.com/hitl/user-confirmation.md) and [HITL](https://docs.agno.com/hitl/overview.md).
 
 ## Hooks and Controls
 
-- `@tool(pre_hook=..., post_hook=...)` callbacks receive a `FunctionCall` (from `agno.tools`). Read `fc.function.name`, `fc.arguments`, and `fc.result`; the old `(name, args, result)` lambdas are not the correct signature.
-- `tool_hooks` are wrapping middleware. A sync hook receives `function_name`, `function_call`, and `arguments`, calls `function_call(**arguments)`, and returns its result. Match the async hook contract on async paths. Ordinary pre/post-hook exceptions are logged and do not reliably block execution; they are not an authorization gate. See [tool hooks](https://docs.agno.com/tools/hooks.md).
-- `include_tools` / `exclude_tools` select Toolkit functions. `requires_confirmation_tools` marks selected Toolkit operations for review. These controls do not replace source permissions.
-- `cache_results=True` and `cache_ttl` can help repeatable reads. Do not cache side effects or mix users' sensitive results in a shared cache.
-- `stop_after_tool_call=True` ends the run after that tool. Use it deliberately; it can prevent the model from writing a final synthesis.
+- `@tool(pre_hook=..., post_hook=...)` injects `fc: FunctionCall` from `agno.tools`. Read `fc.function.name`, `fc.arguments`, and `fc.result`. Ordinary callback exceptions are logged and execution continues; these hooks are not authorization gates.
+- Wrapping `tool_hooks` receive `function_name`, `function_call`, and `arguments`; return `function_call(**arguments)` to continue. Async hooks await that call. See [tool hooks](https://docs.agno.com/tools/hooks.md).
+- Toolkit `include_tools` / `exclude_tools` select functions; `requires_confirmation_tools` selects approvals. Neither replaces source permissions.
+- `cache_results=True` / `cache_ttl` suit repeatable reads, not side effects or shared sensitive user results.
+- `stop_after_tool_call=True` stops without a model-written final synthesis.
 
 ## Choose an Integration
 
-Use the [toolkit index](https://docs.agno.com/tools/toolkits/overview.md) for current setup, packages, credentials, and available function names. Do not assume installing Agno installs every toolkit dependency.
+Check the [toolkit index](https://docs.agno.com/tools/toolkits/overview.md) or [supported Tools](https://github.com/agno-agi/agno/tree/main/cookbook/91_tools) for dependencies, credentials, and function names.
 
 | Need | Current integration | Prerequisites/caution |
 | --- | --- | --- |
@@ -139,6 +139,6 @@ Use the [toolkit index](https://docs.agno.com/tools/toolkits/overview.md) for cu
 | Host file access | `FileTools` from `agno.tools.file` | Restrict file access; do not expose secrets or broad write permissions |
 | External MCP tools | `MCPTools` from `agno.tools.mcp` | See [MCP](mcp.md) for async lifecycle and server prerequisites |
 
-For many operations over one source, consider [Context Providers](https://docs.agno.com/context-providers/using-providers.md) rather than exposing every low-level tool. For model-generated code, use a configured isolated execution service such as [Daytona](https://docs.agno.com/tools/toolkits/others/daytona.md) or [E2B](https://docs.agno.com/tools/toolkits/others/e2b.md). These need their own packages, credentials, network policy, and cleanup. Host `ShellTools` or `PythonTools` are not a sandbox.
+Use [Context Providers](https://docs.agno.com/context-providers/using-providers.md) to avoid large low-level tool lists. Model-generated code needs configured isolation, such as Daytona or E2B, with credentials, network policy, and cleanup. Host `ShellTools` / `PythonTools` are not sandboxes.
 
-Keep user-specific state and clients scoped correctly when reusing toolkits. Build agents outside loops, and do not share mutable credentials across users. Consult the [custom toolkit guide](https://docs.agno.com/tools/creating-tools/toolkits.md) for more complex integrations.
+Scope mutable state, clients, and credentials by caller when reusing toolkits. See [custom toolkits](https://docs.agno.com/tools/creating-tools/toolkits.md) for extensions.

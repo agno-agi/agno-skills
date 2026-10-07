@@ -1,10 +1,10 @@
 # AgentOS Services and Operations
 
-Use AgentOS when agents, teams, or workflows need an HTTP, MCP, or messaging surface. The runtime runs in your environment; connecting the hosted Control Plane is optional. See [Agents as API](https://docs.agno.com/use-cases/agents-as-api.md) and [Build](build.md).
+Use AgentOS for HTTP, MCP, or messaging access. It runs in your environment; the hosted Control Plane is optional. See [Agents as API](https://docs.agno.com/use-cases/agents-as-api.md) and [Build](build.md).
 
 ## Minimal Local Service
 
-Install `agno[os,openai,sqlite]` and set `OPENAI_API_KEY`. Save as `app.py`; this local example is **not authenticated**. Model calls require access to the selected model.
+Install `agno[os,openai,sqlite]`, set `OPENAI_API_KEY`, and confirm model access. Save as `app.py`. This local starter configures no authentication.
 
 ```python
 from agno.agent import Agent
@@ -27,18 +27,18 @@ if __name__ == "__main__":
     agent_os.serve(app="app:app", host="127.0.0.1", port=7777, reload=False)
 ```
 
-Run `python app.py`, then inspect `/health` and `/docs`. The core run endpoint accepts **form data**, not an assumed JSON chat schema:
+Run `python app.py`; inspect `/health` and `/docs`. Run endpoints accept **form data**:
 
 ```bash
 curl http://localhost:7777/agents/assistant/runs \
   -F 'message=Hello' -F 'session_id=local-demo' -F 'stream=false'
 ```
 
-Keep the returned `session_id` for follow-up messages and `run_id` for lifecycle actions. Use `stream=true` for SSE and parse typed events. Derive the actual URL and port from the project rather than copying this port into a deployment.
+Keep `session_id` for follow-ups and `run_id` for lifecycle actions. Use `stream=true` for typed SSE events. Use the project’s deployment URL, not this example port.
 
 ## Production Identity and Data Boundaries
 
-Read [Security & Auth](https://docs.agno.com/features/security-and-auth.md) and the [AuthorizationConfig reference](https://docs.agno.com/reference/agent-os/authorization-config.md). Add authentication **before** exposing the service. RS256 verification also needs `PyJWT[crypto]`; install it in the project environment (for example, `uv pip install "PyJWT[crypto]"`). The base AgentOS extra does not guarantee this dependency. This replacement constructor extends the local example above; configure a production database separately:
+Before exposure, follow [Security & Auth](https://docs.agno.com/features/security-and-auth.md) and [AuthorizationConfig](https://docs.agno.com/reference/agent-os/authorization-config.md). RS256 requires `uv pip install "PyJWT[crypto]"`; `agno[os]` supplies only base PyJWT. Replace the constructor above; configure PostgreSQL separately:
 
 ```python
 from os import environ
@@ -62,54 +62,53 @@ agent_os = AgentOS(
 app = agent_os.get_app()
 ```
 
-- The key must match your issuer and algorithm. Use a verified JWT subject for user identity; do not trust a client-supplied `user_id` or treat a session ID as a credential.
-- Grant minimal scopes such as `agents:assistant:run`. Do not give end users `agent_os:admin`; admins bypass user isolation.
-- Authorization does not turn on persistent user isolation for JWT callers. Explicitly opt in. Review shared/unowned data and tool/backend access separately.
-- AgentOS copies registered components for core run routes, but some resources are shared. Custom tool state, MCP credentials, and database connections must be concurrency-safe and user-scoped where needed.
-- The 3.1 `agno.os.authz` package adds role stores, policies, audit records, user directories, and native/fine-grained authorization engines. Read the matching release and security guides before enabling these; do not mix legacy config and a new policy setup without checking their interaction.
-- Protect custom routes explicitly. Health/discovery routes and MCP server cards can be public. Messaging interfaces have their own request verification; MCP OAuth is a separate surface.
-- Use PostgreSQL for shared persistence, HTTPS, restricted CORS, and gateway rate limits. Keep tokens, verification material, and database credentials out of logs and committed files.
+Agno 3.1.1 accepts this documented configuration but deprecates `authorization_config` in favor of `agno.os.authz.Authorization`. Passing both configurations together is rejected.
 
-Test with two non-admin identities: creation, list/read, continuation, cancellation, and reconnect must enforce ownership. Also test missing/invalid tokens and forbidden scopes. A successful health check proves none of these boundaries.
+- Match keys to the issuer and algorithm. Use a verified JWT subject for identity; never trust client-supplied identity or treat session IDs as credentials.
+- Grant minimal scopes such as `agents:assistant:run`. `agent_os:admin` bypasses user isolation.
+- JWT scope enforcement defaults off; configured JWT environment keys or `OS_SECURITY_KEY` can still enable authentication. Audience checks and JWT user isolation need explicit opt-in, as above.
+- Review shared/unowned data and backend permissions separately. Models, databases, MCP handles, and some tools remain shared across copied runs; keep mutable state concurrency-safe and credentials user-scoped.
+- Protect custom routes explicitly with scope mappings; registering a route does not define its permissions. Discovery routes/server cards can remain public; messaging verification and MCP OAuth have separate policies.
+- Use HTTPS, restricted CORS, and gateway rate limits. Keep credentials out of logs and committed files.
+
+Test two non-admin identities across create/list/read, continue/cancel, and reconnect. Test missing/invalid tokens, missing subjects, and forbidden scopes. With user isolation, run lifecycle requests need `session_id`; workflow reconnect also needs `workflow_id`. Health checks do not prove isolation.
 
 ## Background Work, Reconnect, and Recovery
 
-Read [background execution](https://docs.agno.com/background-execution/overview.md), the [durable queue](https://docs.agno.com/agent-os/background-execution/durable-queue.md), and [multi-replica setup](https://docs.agno.com/agent-os/background-execution/multi-replica.md). Confirm the configured runtime's API schema.
+Read [background execution](https://docs.agno.com/background-execution/overview.md), the [durable queue](https://docs.agno.com/agent-os/background-execution/durable-queue.md), and [multi-replica setup](https://docs.agno.com/agent-os/background-execution/multi-replica.md). Check the installed runtime’s API schema. Background execution requires a database on the agent, team, or workflow; an OS-level queue store is a separate concern.
 
 | Need | Configure and verify |
 | --- | --- |
-| Return before completion | Submit a background run; persist and use its run/session IDs |
-| Reconnect after SSE disconnect | Use the documented replay/cursor mechanism; handle duplicate events |
-| Resume after worker/process failure | Configure the durable queue/worker and checkpoint strategy; background mode alone is not this guarantee |
-| Several replicas | Shared database plus the documented distributed coordination/event-stream backend; in-memory buffers do not span replicas |
-| Pause for approval | Persist requirements and continue the same run after authorized approval, rather than starting another run |
-| Cancel work | Use the cancellation API and inspect status/`cancellation_stage`; cancellation does not undo external side effects |
+| Return before completion | Background mode, database persistence, and saved run/session IDs |
+| Reconnect SSE | `/resume` replays retained events after `last_event_index`; handle duplicates |
+| Survive worker loss | Durable queue and supported queue store, not background mode alone |
+| Several replicas | Shared database and distributed cancellation/event streaming; buffers default to in-process |
+| Approval or cancellation | Authorize lifecycle actions against run/session ownership; cancellation cannot undo side effects |
 
-`QueueConfig(durable=True)` opts into durable execution; default background work stays in-process. Accepted durable submissions use `background=true, stream=false` and return HTTP 202 with IDs. Keep durable job storage distinct from Redis coordination. The default `max_attempts=1` does not retry a lost worker; a larger budget can repeat side effects. Some payloads are not queue-compatible: verify admission, restart recovery, and idempotency, not just browser reconnect.
+Default background work stays in-process. `QueueConfig(durable=True)` opts into durable execution with a supported queue store (PostgreSQL recommended). Accepted queueable submissions use `background=true, stream=false` and return HTTP 202. Job storage is separate from Redis coordination. Default `max_attempts=1` does not re-execute lost workers; larger budgets can repeat side effects. Not every payload is queue-compatible. Test admission, restart recovery, and idempotency, not only browser reconnect.
 
-SSE `/resume` replays retained events after `last_event_index`; it does not restart work. Database replay requires stored events. [Checkpoints](https://docs.agno.com/examples/agent-os/run-lifecycle/checkpoints.md) and `/continue` with `continue_from` are a different recovery path. Authorize all lifecycle operations with the run and session ownership information required by the installed version.
+`/resume` does not restart work. Database replay requires `store_events=True`. [Checkpoints](https://docs.agno.com/examples/agent-os/run-lifecycle/checkpoints.md) and `/continue` with `continue_from` provide a separate recovery path. Continue approval-paused runs rather than starting replacements.
+
+## Studio and Custom Agent Platforms
+
+[Studio](https://docs.agno.com/agent-os/studio/introduction.md) is the visual builder for agents, teams, and workflows in the hosted Control Plane, connected to your AgentOS. You can also build **your own agent platform** with the reusable SDK tools, without the hosted UI.
+
+- Define an `agno.registry.Registry` of approved models, tools, and resources. Share it and a component-capable synchronous database with `AgentOS(registry=registry, db=db)`; use PostgreSQL in production. Keep credentials server-side.
+- Attach `agno.tools.studio.StudioTools(registry=registry, db=db)` to a builder `Agent` for creation, editing, validation, previews, versioning, and publishing. Serve the builder through AgentOS or run it standalone. Changes start as drafts; publishing activates stored configuration, not infrastructure deployment.
+- Connect your UI to `GET /registry`, `/components`, and AgentOS run/continuation APIs. For dispatch without builder mutations, use `agno.tools.studio_runner.StudioRunnerTools` instead of `StudioTools`.
+- For MCP, expose the builder through `AgentOS(..., mcp=True)` and `run_agent`/`continue_run`. Directly registering default `StudioTools` as MCP tools rejects approval-gated methods; do not remove approval gates just to register them.
+- Treat builder access as privileged. Enforce caller identity, scopes, user isolation, and approval pauses. Review cross-user sharing before publishing; tool selection is not a sandbox.
+
+See [StudioTools](https://docs.agno.com/tools/toolkits/agent-os/studio.md), [Registry](https://docs.agno.com/agent-os/studio/registry.md), and the [Studio cookbooks](https://github.com/agno-agi/agno/tree/v3.1.1/cookbook/05_agent_os/22_studio). These APIs are available in Agno 3.1.1; check template pins before using them.
 
 ## Capabilities to Add Only When Needed
 
-| Capability | Guide and decision |
-| --- | --- |
-| MCP serving and client auth | [MCP](mcp.md); explicitly choose published tools and lifecycle tools |
-| Slack, Telegram, WhatsApp, AG-UI, A2A | [Interfaces](https://docs.agno.com/use-cases/product-agents/interfaces.md); use the interface's verification and optional dependencies |
-| Existing non-Agno agents | [Multi-framework integrations](https://docs.agno.com/agent-os/multi-framework/overview.md); native Agno features do not automatically apply to wrapped runtimes |
-| Remote agents/teams/workflows | [Remote execution](https://docs.agno.com/agent-os/remote-execution/overview.md); distinguish transport/session records from remote execution recovery |
-| Bounded public access | [PublicSurface](https://docs.agno.com/agent-os/public-surface.md); explicitly select components, quotas, and tool exposure instead of disabling auth globally |
-| Scheduled runs | [Scheduling](https://docs.agno.com/features/scheduling.md); persist schedules, select timezones/retries, and test duplicate-run handling |
-| Registry and Studio | [Components](https://docs.agno.com/examples/components/overview.md); preserve stable IDs and register non-serializable tools, schemas, and dependencies |
-| Durable files and checkpoints | [FileSystem](https://docs.agno.com/filesystem/overview.md); scope namespaces/users and do not store secrets |
-| OpenTelemetry traces | [Tracing](https://docs.agno.com/tracing/overview.md); configure dependencies/storage, then enable `tracing=True` |
-| Quality and regression checks | [Evals](https://docs.agno.com/evals/overview.md) and [eval suites](https://docs.agno.com/evals/suite/overview.md) |
+Start with [MCP](mcp.md) or [interfaces](https://docs.agno.com/use-cases/product-agents/interfaces.md) when needed; install interface dependencies and configure their request verification. Use [PublicSurface](https://docs.agno.com/agent-os/public-surface.md) for selected public components and quotas, not globally disabled auth. See [scheduling](https://docs.agno.com/features/scheduling.md) and [tracing](https://docs.agno.com/tracing/overview.md) for optional setup.
 
-**Filesystem upgrade warning:** 3.1 re-keys `DbFileSystem` storage by namespace, user, and path. Older tables require the database-specific filesystem migration with the application stopped. It is separate from `MigrationManager`; read the [3.1.0 release notes](https://github.com/agno-agi/agno/releases/tag/v3.1.0), back up data, and obtain approval before running it.
+[FileSystem](https://docs.agno.com/filesystem/overview.md) stores durable notes/checkpoints, not secrets. Scope namespaces and users explicitly; namespaces do not replace authorization. Older `DbFileSystem` tables must be re-keyed by namespace, user, and path using the database-specific [3.1 migration](https://github.com/agno-agi/agno/releases/tag/v3.1.0), separate from `MigrationManager`. Stop the app, back up data, and obtain approval first.
 
 ## Evaluation and Observability
 
-- Use accuracy or model-as-judge evaluations for answer quality, reliability evaluations for tool behavior, and performance evaluations for latency/memory. A syntax check is not an agent evaluation.
-- Use `Case`, `cli`, `run_cases`, and `arun_cases` from `agno.eval` for repeatable suites, tag selection, timeouts, JSON reports, and CI exit codes. Cases can combine criteria, expected tool calls, and scorers. Control judge model choice, cost, and variability.
-- Trace representative success, tool failure, and cancellation paths. Inspect retrieved sources and approvals, not only the final answer.
-- Apply data retention and redaction policies to prompts, tool arguments, traces, and evaluation outputs.
-- Connect the actual AgentOS URL to [os.agno.com](https://os.agno.com) only when requested. Confirm visibility there separately from local API success.
+- Use [evals](https://docs.agno.com/evals/overview.md) and [repeatable suites](https://docs.agno.com/evals/suite/overview.md) for answer quality, tool reliability, and performance. Syntax checks are not agent evaluations; budget judge calls separately.
+- Trace success, tool failure, and cancellation. Inspect sources and approvals; apply retention and redaction to prompts, tool arguments, traces, and results.
+- Connect to [os.agno.com](https://os.agno.com) only when requested. Verify Control Plane visibility separately from local API success.

@@ -1,8 +1,8 @@
 # Team Reference
 
-Use a team when a model should choose which specialists work on a request. Use a [workflow](workflows.md) when code must control the order or approval gates.
+Use a team for model-led delegation, or a [workflow](workflows.md) for code-controlled order and approval gates.
 
-These examples target Agno 3.1.1. Check the project's installed version before copying newer APIs. Examples use `OpenAIResponses`; keep the user's provider and model choice.
+Examples target Agno 3.1.1 with `OpenAIResponses`. Check the installed version and keep the user's provider/model choice.
 
 ## Choose a Mode
 
@@ -10,20 +10,20 @@ Import `Team` and `TeamMode` from `agno.team`.
 
 | Mode | Delegation behavior | Use for |
 | --- | --- | --- |
-| `TeamMode.coordinate` (default) | Leader selects members, writes tasks, and combines their results. | Work that needs specialist judgment and synthesis. |
-| `TeamMode.route` | Leader selects one member and returns its response without synthesis. | A specialist router. |
-| `TeamMode.broadcast` | Leader sends the same task to every member, then combines results. | Independent reviews of the same input. |
-| `TeamMode.tasks` | Leader creates a shared task list, manages dependencies, and runs an iterative task loop. | Goals that need adaptive decomposition. |
+| `TeamMode.coordinate` (default) | Leader selects members, writes tasks, and combines results. | Specialist judgment and synthesis. |
+| `TeamMode.route` | Leader selects one member and returns its response directly. | Specialist routing. |
+| `TeamMode.broadcast` | Leader sends the same task to all members, then combines results. | Independent reviews. |
+| `TeamMode.tasks` | Leader manages a shared task list and dependencies iteratively. | Adaptive decomposition. |
 
-Modes configure the leader's tools; they do not force it to delegate every request. Give clear delegation instructions when members must participate.
+Modes do not force delegation. Instruct the leader when members must participate.
 
-- Broadcast members run **sequentially with `run()`**, and concurrently with `arun()`.
-- In tasks mode, `max_iterations` bounds the outer task loop. It is not a cap on all model calls or a guarantee that all tasks finish. Inspect task events/state and failures.
-- Prefer `mode` to the legacy `respond_directly` and `delegate_to_all_members` flags. Explicit mode takes precedence. Do not use old `collaborate` mode examples.
+- Broadcast runs members **sequentially with `run()`**, concurrently with `arun()`.
+- `max_iterations` bounds the tasks-mode outer loop, not model calls or task completion. Inspect task state and failures.
+- Explicit `mode` overrides legacy `respond_directly` / `delegate_to_all_members` flags. Avoid old `collaborate` examples.
 
 ## Coordinate Two Specialists
 
-Standalone script. Requires the OpenAI and SQLite dependencies and `OPENAI_API_KEY`. SQLite is for this local example; use PostgreSQL for a production service.
+Standalone script. Requires OpenAI/SQLite dependencies and `OPENAI_API_KEY`. Use PostgreSQL for production.
 
 ```python
 from agno.agent import Agent
@@ -66,11 +66,11 @@ if __name__ == "__main__":
     )
 ```
 
-Create members once, not inside a request loop. Explicit member IDs give delegation a stable identity. Members can also be other `Team` instances; give each nested team a clear role.
+Reuse members outside request loops. Explicit IDs stabilize delegation identity. Nested `Team` members also need clear roles.
 
 ## Route, Broadcast, or Plan Tasks
 
-Configuration fragments. Reuse `writer`, `reviewer`, and the imports above. Construct the desired mode before running it.
+Configuration fragments using `writer`, `reviewer`, and the imports above.
 
 ```python
 router = Team(
@@ -97,7 +97,7 @@ task_team = Team(
 )
 ```
 
-Async fragment using `review_team` above. In an existing event loop, call `await main()` instead of `asyncio.run(main())`.
+Async fragment using `review_team`. In an existing event loop, use `await main()` instead of `asyncio.run(main())`.
 
 ```python
 import asyncio
@@ -112,19 +112,17 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-`run()` / `arun()` return `TeamRunOutput` without streaming. For formatted output use `print_response()` / `aprint_response()`. With async streaming, iterate `async for event in team.arun(..., stream=True, stream_events=True)`; do not await the iterator. `stream_member_events=True` exposes member events. Tasks mode also emits task-created, task-updated, and iteration events.
+`run()` / `arun()` return `TeamRunOutput` without streaming. Format output with `print_response()` / `aprint_response()`. For async streaming, use `async for event in team.arun(..., stream=True, stream_events=True)`, not `await`. Member events are included by default (`stream_member_events=True`).
 
 ## Control Shared Context
 
-Choose each setting for its specific purpose:
-
-- `add_history_to_context=True`: give the leader prior runs from this session. Use `num_history_runs` to bound them.
-- `add_team_history_to_members=True`: give members team history; bound it with `num_team_history_runs`.
+- `add_history_to_context=True`: leader session history, bounded by `num_history_runs`.
+- `add_team_history_to_members=True`: member access to team history, bounded by `num_team_history_runs`.
 - `share_member_interactions=True`: share member requests and responses from the current run. This is not persisted history or an ordering guarantee for concurrent members.
 - `show_members_responses=True`: display member output. For programmatic retention, use `store_member_responses=True`.
-- `output_schema=YourPydanticModel`: constrain the team's final result when typed output is required.
+- `output_schema=YourPydanticModel`: typed final output.
 
-Pass trusted `user_id` and the correct `session_id` per run in multi-user services. Neither a team ID nor a session ID is authorization. Keep mutable member/tool state and stored learning scoped to the caller. See [learning isolation](learning.md#isolate-learning).
+Pass trusted `user_id` and `session_id` per run. IDs are not authorization. Scope mutable member/tool state and stored learning to the caller. See [learning isolation](learning.md#isolate-learning).
 
 ## Current Sources
 

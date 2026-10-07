@@ -1,17 +1,8 @@
 # Agno Skills
 
-Official [Agno](https://github.com/agno-agi/agno) skill for coding agents. Build and improve agents, teams, workflows, and AgentOS services with focused references and current-source guidance.
+Official [Agno](https://github.com/agno-agi/agno) skill for coding agents. Build and debug agents, teams, workflows, and AgentOS services using focused references and current official docs.
 
-## What It Covers
-
-- SDK setup, structured output, async streaming, tools, and human approval
-- Team coordination and tasks; workflows, branching, parallel steps, and resume
-- Knowledge/RAG, reranking, published docs pages, memory, and learning
-- Skills, context providers, guardrails, and durable files
-- API and MCP serving, auth, user isolation, background execution, and deployment
-- Evals, tracing, scheduling, and Control Plane connection when requested
-
-The main skill stays small and loads topic references only when needed. It preserves the project's provider, database, framework, and deployment choices. A local SDK question does not require signup or deployment.
+Covers structured output, streaming, tools, approvals, RAG, learning, MCP, auth, deployment, and evals. It preserves existing project/provider choices; SDK-only tasks need no signup or deployment.
 
 ## Install
 
@@ -34,67 +25,40 @@ Run inside Claude Code:
 
 ### Manual Install
 
-From a clone of this repository, copy the skill into your project or global configuration:
+From this repository, copy the skill into your project:
 
 ```bash
-# Project-level Claude Code skill
 mkdir -p .claude/skills
 cp -r plugins/agno/skills/agno .claude/skills/agno
-
-# Or global
-mkdir -p ~/.claude/skills
-cp -r plugins/agno/skills/agno ~/.claude/skills/agno
 ```
 
-For other clients, use their documented skill directory or the skills.sh installer. Review an existing installation before overwriting it.
+For a global Claude Code installation, use `~/.claude/skills/agno` instead. Other clients have their own skill directories. Review existing files before replacing them.
 
 ## Usage
 
-The skill activates for Agno tasks, including `agno.*` code, docs assistants, teams, workflows, MCP, learning, and AgentOS. Example prompts:
+Example requests:
 
-- "Build a docs assistant using my existing PostgreSQL database."
-- "Add human approval before this agent calls a write tool."
+- "Build an Agno docs assistant using my PostgreSQL database."
+- "Require human approval before this agent calls a write tool."
 - "Serve my agent over MCP with only the selected tools."
-- "Check user isolation and background-run recovery in this AgentOS app."
 
-You can also invoke `/agno` in clients that support skill slash commands. Agno docs MCP is optional; the skill can use the official Markdown docs index instead.
+Use `/agno` where the client supports skill commands. Docs MCP is optional; the skill can read the official Markdown docs instead.
 
-## Compatibility
+## Contents and Compatibility
 
-References were reviewed against **Agno 3.1.1** and the current official docs. They include 3.1-specific behavior such as opt-in MCP lifecycle tools and published-page sync progress. Inspect the project's pinned version and matching migration guide before applying them to an older app. Model IDs are examples, not guarantees of account access.
+[`SKILL.md`](plugins/agno/skills/agno/SKILL.md) routes requests to topic files in [`references/`](plugins/agno/skills/agno/references). It loads only the guidance needed for the task.
 
-## Structure
-
-```text
-plugins/agno/skills/agno/
-├── SKILL.md                    # Routing, version checks, implementation rules
-└── references/
-    ├── build.md                # Use cases, setup, deployment, evidence checklist
-    ├── examples.md             # Small SDK starting points
-    ├── agents.md               # Configuration, streaming, sessions, context
-    ├── teams.md                # Coordinate, route, broadcast, tasks
-    ├── workflows.md            # Steps, control flow, progress, pause/resume
-    ├── knowledge.md            # RAG, reranking, published pages
-    ├── tools.md                # Tools, approvals, guardrails, skills, providers
-    ├── mcp.md                  # Consume and serve MCP; connection lifecycle
-    ├── learning.md             # Memory and learning stores
-    ├── agentos.md              # Serving, security, recovery, evals, operations
-    └── models.md               # Provider configuration
-```
+References target **Agno 3.1.1**. Check the project's pinned version and migration guidance before applying newer APIs. Example model IDs do not guarantee account access.
 
 ## Updating
 
-For Claude Code plugin installations:
+For Claude Code: `/plugin update agno@agno-skills`. For skills.sh: `npx skills update`. For manual installations, review and copy changes from the updated repository.
 
-```text
-/plugin update agno@agno-skills
-```
+## Maintainer Checks
 
-For skills.sh installations, use `npx skills update`. For manual installs, update your clone and review/copy the changed skill files.
+These Python tools validate the repository; they are **not part of the installed skill** and do not run during installation.
 
-## Validation and Maintenance
-
-Use Python 3.10+ for repository checks:
+With Python 3.10+:
 
 ```bash
 uv venv
@@ -105,20 +69,17 @@ uv pip install -r requirements-dev.txt
 .venv/bin/ruff format --check scripts tests
 ```
 
-Validation checks skill metadata, plugin versions, local Markdown links, and Python example syntax. To also run the offline API and example smoke tests against published Agno 3.1.1:
+For optional offline API/example checks against published Agno 3.1.1:
 
 ```bash
 uv pip install -r requirements-smoke.txt
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-The smoke tests check imports, constructor keywords, service schemas, and model-free workflow/approval behavior. They skip when Agno is not installed. Neither suite calls model providers or proves that a deployment works. CI runs both suites.
+CI runs both suites. They check metadata, links, syntax, imports, constructor arguments, and model-free workflows—not live model calls, external services, or deployment. API tests skip when Agno is absent. When changing guidance, verify it against the relevant docs and installed APIs.
 
-When updating references, verify the installed/released Agno version, read the linked guide, check imports and constructor arguments, and add regression checks for errors found. Keep detailed examples in the topic references, not in `SKILL.md`.
+## Sources
 
-## Links
-
-- [Agno Documentation](https://docs.agno.com)
-- [Docs Markdown Index](https://docs.agno.com/llms.txt)
-- [Agno Releases](https://github.com/agno-agi/agno/releases)
-- [Cookbook Examples](https://github.com/agno-agi/agno/tree/main/cookbook)
+- [Documentation index](https://docs.agno.com/llms.txt)
+- [Releases](https://github.com/agno-agi/agno/releases)
+- [Cookbook](https://github.com/agno-agi/agno/tree/main/cookbook)

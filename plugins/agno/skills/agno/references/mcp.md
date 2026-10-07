@@ -1,14 +1,14 @@
 # MCP: Consume Tools or Serve AgentOS
 
-These are different directions:
+Choose the direction:
 
 | Goal | API |
 | --- | --- |
 | Let an Agno agent call an external MCP server | `agno.tools.mcp.MCPTools` |
 | Expose agents, teams, workflows, or custom tools to MCP clients | `AgentOS(mcp=...)` and `MCPConfig` |
-| Give a coding agent access to Agno docs | Connect that client's MCP configuration to `https://mcp.agno.com` |
+| Give a coding client Agno docs | Connect it to `https://mcp.agno.com` |
 
-Read [MCP tools](https://docs.agno.com/tools/mcp/overview.md) and [AgentOS MCP serving](https://docs.agno.com/features/mcp-server.md) for the installed version. Install `agno[mcp,openai]` for the client example and add `os,sqlite` for the server example.
+See [MCP tools](https://docs.agno.com/tools/mcp/overview.md) and [MCP serving](https://docs.agno.com/features/mcp-server.md). Install `agno[mcp,openai]` for the client; add `os,sqlite` for the server.
 
 ## Consume One Server
 
@@ -37,30 +37,21 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-| Transport | Configuration |
-| --- | --- |
-| Local subprocess | `MCPTools(command="uvx mcp-server-git", transport="stdio")` |
-| HTTP server | `MCPTools(url="https://example.com/mcp", transport="streamable-http")` |
-| Legacy SSE server | `MCPTools(url="https://example.com/sse", transport="sse")` |
-
-Choose one transport and its matching command/URL. Pin and review executable packages before starting subprocess servers; they run with local permissions. Pass only required environment variables.
+Use `transport="stdio"` with `command=` for local subprocesses, or `transport="streamable-http"` with `url=` for HTTP. `sse` is legacy. Review and pin subprocess packages; they run with local permissions. Pass only required environment variables.
 
 ## Multiple Servers and Lifecycle
 
-Create **one MCPTools instance per server**. Nest `async with` blocks or use `contextlib.AsyncExitStack` and pass the connected instances in `Agent(tools=[...])`. Give colliding tool names different `tool_name_prefix` values. `MultiMCPTools` is not exported by Agno 3.1.1; do not copy old examples that import it.
+Use **one MCPTools per server**, nested async context managers or `AsyncExitStack`, and `Agent(tools=[...])`. Prefix colliding names with `tool_name_prefix`. Agno 3.1.1 does not export `MultiMCPTools`.
 
-- Keep each connection open for the entire agent run or stream. Prefer context managers so exceptions and cancellations close it.
-- Use `include_tools` or `exclude_tools` to expose only intended operations. Tool filtering is not server-side authorization.
-- Use `headers` for fixed HTTP headers or `header_provider` for fresh request credentials. Handle discovery calls without a run context. A failing callback is not an authorization gate; the server must reject missing/invalid credentials. Never capture one user's token in a globally shared client.
-- MCP client connection management is async. Use `arun()` / `aprint_response()` inside the connection's async lifecycle; this does not mean all of Agno is async-only.
-- `refresh_connection=True` checks connection health and refreshes tool schemas before runs; it does not force a new connection every time. Set timeouts for the actual server.
-- For AgentOS-managed tool connections and shutdown, follow [MCPTools within AgentOS](https://docs.agno.com/agent-os/mcp/tools.md). Let its lifespan manage those connections, use `reload=False`, and do not wrap the module-level app in a context that closes before requests arrive.
-
-For MCP Toolbox for Databases, consult its current integration and optional dependencies. Its toolkit is `agno.tools.mcp_toolbox.MCPToolbox`, not an export of `agno.tools.mcp`.
+- Keep connections open through the full async run/stream, then close them on completion, error, or cancellation.
+- Restrict tools with `include_tools` / `exclude_tools`; filtering is not authorization.
+- Use `headers` for fixed credentials or [`header_provider`](https://docs.agno.com/tools/mcp/dynamic-headers.md) for per-run credentials. Discovery has no run context. Callback errors can retain static headers; they do not deny access. Enforce auth server-side. Never share one user’s token globally or persist it in run metadata.
+- `refresh_connection` defaults to `False`; `True` refreshes schemas and reconnects only unhealthy sessions. Set server-appropriate timeouts.
+- In [AgentOS](https://docs.agno.com/agent-os/mcp/tools.md), let its lifespan manage connections and use `reload=False`. Do not close module-level tools before requests arrive.
 
 ## Serve Selected AgentOS Tools
 
-Save as `mcp_app.py`. This is local-only and unauthenticated; add auth before exposing it:
+Save as `mcp_app.py`. This local starter configures no authentication; add it before exposure:
 
 ```python
 from agno.agent import Agent
@@ -88,21 +79,20 @@ if __name__ == "__main__":
     agent_os.serve(app="mcp_app:app", host="127.0.0.1", port=7777, reload=False)
 ```
 
-- The default endpoint is `/mcp`. `mcp=True` exposes the built-in default tools; use an explicit `MCPConfig` for a smaller surface.
-- In 3.1, `MCPConfig(tools=[...])` publishes **only those tools** by default. `default_tools` and `lifecycle_tools` both default to `False`. The example opts into continue/cancel tools; omit them if not needed.
-- A server card can disclose tool names/schemas publicly. Set `server_card=False` when discovery is not intended.
-- For replicas, configure stateless transport and shared application state as described in [server configuration](https://docs.agno.com/agent-os/mcp/mcp.md).
+- The endpoint defaults to `/mcp`. `mcp=True` exposes all eight built-ins. `MCPConfig(tools=[...])` exposes only listed tools: `default_tools` and `lifecycle_tools` default to `False`. This example opts into continue/cancel tools.
+- Server cards publish tool names/schemas publicly by default. Set `server_card=False` to disable them.
+- For replicas, follow [transport and shared-state configuration](https://docs.agno.com/agent-os/mcp/mcp.md).
 
 ## Connect and Verify
 
-For local coding clients, [Agno Connect](https://docs.agno.com/cli/connect.md) discovers and configures the connection:
+[Agno Connect](https://docs.agno.com/cli/connect.md) configures local coding clients:
 
 ```bash
 uvx agno connect --url http://localhost:7777
 ```
 
-Pass the **AgentOS base URL**, not its `/mcp` suffix. This command changes detected client configuration; run it only when the user asks to connect those clients.
+Pass the **base URL**, not `/mcp`. This changes detected client configuration; run only when requested.
 
-Hosted ChatGPT/Claude connectors need a public HTTPS MCP endpoint and OAuth for authenticated access; their connector UIs do not accept arbitrary bearer headers. Follow the current [built-in OAuth example](https://docs.agno.com/examples/agent-os/mcp/oauth-builtin.md), including the exact public origin and connection secret. Configure MCP auth separately from REST JWT scopes and check user isolation.
+Hosted ChatGPT/Claude connectors require public HTTPS and OAuth for authenticated access, not arbitrary bearer headers. Follow [built-in OAuth](https://docs.agno.com/examples/agent-os/mcp/oauth-builtin.md): exact `AGENTOS_URL`, `MCP_CONNECT_SECRET` (16+ characters), and synchronous database persistence. Leave connector client-ID/secret fields empty; enter the connection secret on consent. Check MCP auth and user isolation separately from REST JWT scopes.
 
-Verify the client's tool list, one representative call, and denied access for an unauthorized caller. A reachable HTTP endpoint alone does not prove MCP interoperability or authorization.
+Verify tool discovery, a representative call, and denied unauthorized access. Offline checks cannot establish external MCP/provider interoperability.

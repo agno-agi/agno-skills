@@ -1,16 +1,14 @@
 # SDK Examples and Patterns
 
-Use these small examples for SDK-only tasks. Add a service only when needed; see [AgentOS](agentos.md) and [Build with Agno](build.md).
+Start with the SDK. Add [AgentOS](agentos.md) only when a service is needed.
 
 ## Prerequisites
 
-- Use the project's virtual environment and inspect its pinned Agno version. For example: `python -c "from importlib.metadata import version; print(version('agno'))"`.
-- These examples use the Agno 3.1.1 API. Check the [release notes](https://github.com/agno-agi/agno/releases) before adapting older projects.
-- For a new environment, install `uv pip install "agno[openai,sqlite]"`. Keep an existing project's dependency pins.
-- Model execution needs `OPENAI_API_KEY`, network access, and access to the selected model. Construction alone does not need a key. The examples use `OpenAIResponses(id="gpt-6.1-sol")`; confirm model availability for your account.
-- Retain the user's provider and model when adapting these examples. See [Models](models.md) for adapter and capability checks.
+- API syntax was checked against Agno 3.1.1. In the project's environment, check `python -c "from importlib.metadata import version; print(version('agno'))"`. Consult [release notes](https://github.com/agno-agi/agno/releases) for older pins.
+- For a new environment: `uv pip install "agno[openai,sqlite]"`. Otherwise retain dependency pins and [provider/model choices](models.md).
+- Execution needs `OPENAI_API_KEY`, network access, and model access. For `gpt-6.1-sol`, check the [GPT-6 SDK version requirement](models.md#configure-an-explicit-adapter); account availability is not guaranteed.
 
-Each Python block is a separate script. Importing it constructs the agent but does not call a model. Reuse agents; do not create them inside request loops.
+Each Python block is a separate script. Importing constructs an agent offline without a key. Main guards prevent model calls on import. Reuse agents outside request loops.
 
 ## 1. Small Agent
 
@@ -34,7 +32,7 @@ if __name__ == "__main__":
     )
 ```
 
-`print_response()` is a console helper. Use `run()` when application code needs the result, or `arun()` in an async path. See [Agents](agents.md) for return types and streaming.
+`print_response()` prints to the console. See [Agents](agents.md#choose-the-run-api) for result, async, and streaming APIs.
 
 ## 2. Typed Extraction
 
@@ -66,11 +64,11 @@ if __name__ == "__main__":
     print(response.content.model_dump_json())
 ```
 
-Use `output_schema`, not prompt-only JSON instructions. Native structured output depends on the adapter and model. Parsing failures can leave text in `content`; a type annotation alone does not validate it. See the [structured-output guide](https://docs.agno.com/input-output/structured-output/agent.md).
+Use `output_schema`, not prompt-only JSON. Native support varies; parsing failures can leave text in `content`. Keep the type check. See [structured output](https://docs.agno.com/input-output/structured-output/agent.md).
 
 ## 3. Persist a Conversation
 
-This local demo needs a writable working directory. It creates `agno-demo.db` when run. For a deployed service, use the project's shared persistent database, usually PostgreSQL.
+Needs a writable working directory; running creates `agno-demo.db`. Deployed services need shared persistence, usually PostgreSQL.
 
 ```python
 from agno.agent import Agent
@@ -98,19 +96,12 @@ if __name__ == "__main__":
     )
 ```
 
-Reuse the same session ID for a continuing conversation. Start a new one for a separate conversation. IDs are not authentication: a service must derive and authorize them from the caller, not trust client-selected IDs. History is not cross-session user memory; see [Learning](learning.md).
+Reuse the session ID within one conversation; start a new ID for another. Services must derive and authorize IDs from the caller, not trust client-selected IDs. History is not cross-session [user memory](learning.md).
 
 ## Next Task
 
-| Need | Read |
-| --- | --- |
-| Async execution, streaming events, context, or media | [Agents](agents.md) |
-| Custom tools, approvals, or tool filtering | [Tools](tools.md) |
-| Search your documents or build a docs assistant | [Knowledge](knowledge.md), then [Build with Agno](build.md) |
-| Persistent user profiles and memories | [Learning](learning.md) |
-| Multiple specialists | [Teams](teams.md) |
-| Explicit steps, branches, loops, or parallel work | [Workflows](workflows.md) |
-| External MCP tools and connection cleanup | [MCP](mcp.md) |
-| Serve runs over an API | [AgentOS](agentos.md) |
+- Tools and approvals: [Tools](tools.md); external connections: [MCP](mcp.md).
+- Document search: [Knowledge](knowledge.md) and [Build with Agno](build.md).
+- Specialists: [Teams](teams.md); explicit control flow: [Workflows](workflows.md).
 
-For a new feature, read its current guide through the [docs index](https://docs.agno.com/llms.txt). Do not copy an unrelated cookbook's dependencies or provider choices.
+Find other current guides in the [docs index](https://docs.agno.com/llms.txt).
