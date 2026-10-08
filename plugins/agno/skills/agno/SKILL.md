@@ -11,7 +11,7 @@ Deliver the smallest working solution. Start with one agent; use teams for model
 
 1. Read project instructions, dependencies, and existing tests. Preserve the framework, provider, database, and deployment choices.
 2. Inspect the installed Agno version and, for editable installs, the source revision and local changes.
-3. Fetch the relevant official Markdown guide.
+3. Read the matching reference below, then fetch its official docs page before writing code, as described under Use Current Sources below. Take provider classes, model IDs, and parameters the reference does not show from that page or the installed source, not from memory. If fetching fails, say so and continue with the reference and installed source.
 
 ## Choose the Path
 
@@ -42,6 +42,7 @@ When a guide is missing, incomplete, or disagrees with behavior, follow [source 
 
 ## Implementation Rules
 
+- For OpenAI, use `OpenAIResponses` from `agno.models.openai`, not `OpenAIChat`.
 - Use `output_schema` for typed results. Confirm provider/model access; example IDs do not guarantee availability.
 - Reuse agents outside query loops, but do not share mutable user state or credentials across callers.
 - Authentication, API scopes, and persistent user isolation are separate controls. Follow [AgentOS](references/agentos.md) for multi-user services.
@@ -52,4 +53,4 @@ When a guide is missing, incomplete, or disagrees with behavior, follow [source 
 
 ## Verify and Hand Off
 
-Respect explicit instructions to defer testing; inspecting source/examples is not runtime validation. When testing is authorized, use the [Build checklist](references/build.md) for the requested behavior. Report changed files, start/call commands, actual addresses, checks run, and deferred checks. Distinguish source review, local startup, deployment, and confirmed Control Plane connection.
+Respect explicit instructions to defer testing; inspecting source/examples is not runtime validation. When testing is authorized, use the [Build checklist](references/build.md) for the requested behavior. Report the references and docs pages used, changed files, start/call commands, actual addresses, checks run, and deferred checks. Distinguish source review, local startup, deployment, and confirmed Control Plane connection.
