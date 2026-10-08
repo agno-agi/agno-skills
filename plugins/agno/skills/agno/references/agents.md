@@ -1,198 +1,110 @@
 # Agent Reference
 
-## Creating an Agent
+Docs: [Agents](https://docs.agno.com/agents/overview.md).
+
+Start with the [SDK examples](examples.md).
+
+## Choose the Run API
+
+Foreground execution:
+
+| Need | Call | Result |
+| --- | --- | --- |
+| Sync response | `agent.run(message, stream=False)` | `RunOutput` |
+| Async response | `await agent.arun(message, stream=False)` | `RunOutput` |
+| Sync stream | `agent.run(message, stream=True)` | Iterator of events |
+| Async stream | `agent.arun(message, stream=True)` | Async iterator of events; do **not** await it |
+| Console output | `agent.print_response(message, stream=True)` | Prints the response |
+| Async console output | `await agent.aprint_response(message, stream=True)` | Prints the response |
+
+Put async calls inside `async def`. Use `asyncio.run(main())` at script entry, not inside an existing event loop. Async tools and MCP need the [async tool path](tools.md).
+
+Check `status` and pending requirements before treating a `RunOutput` as complete. `messages` contains retained run messages, not necessarily full conversation history. Check structured `content` types before accessing fields. See [Running Agents](https://docs.agno.com/agents/running-agents.md) and [RunOutput](https://docs.agno.com/reference/agents/run-response.md) for fields.
+
+## Stream Text and Observe Events
+
+Requires `agno` and `openai`; function calls need `OPENAI_API_KEY` and model access. Construction is offline.
 
 ```python
 from agno.agent import Agent
+from agno.models.openai import OpenAIResponses
+from agno.run.agent import RunEvent
 
-agent = Agent(
-    # --- Identity ---
-    name="My Agent",                    # Display name
-    id="my-agent",                      # Unique identifier
-    model="openai:gpt-4o",             # Model (string shorthand or Model instance)
+agent = Agent(model=OpenAIResponses(id="gpt-6.1-sol"))
 
-    # --- Instructions ---
-    description="Agent description",    # Added to system message
-    instructions=["Rule 1", "Rule 2"], # List of strings or single string
-    system_message="Full override",     # Replaces auto-generated system message
-    expected_output="Format spec",      # Output format guidance
-    additional_context="Extra info",    # Appended to system message
 
-    # --- Tools ---
-    tools=[YFinanceTools()],           # List of Toolkit, Callable, or Function
-    tool_call_limit=10,                # Max tool calls per run
-    tool_choice="auto",                # "auto", "none", "required", or {"type": "function", "function": {"name": "..."}}
-    tool_hooks=[my_hook],              # Hooks called on tool execution
+def stream_answer(message: str) -> None:
+    for event in agent.run(message, stream=True, stream_events=True):
+        if event.event == RunEvent.run_content and isinstance(event.content, str):
+            print(event.content, end="", flush=True)
+        elif event.event in (
+            RunEvent.run_paused,
+            RunEvent.run_cancelled,
+            RunEvent.run_error,
+        ):
+            print(event.event)
 
-    # --- Structured Output ---
-    output_schema=MyPydanticModel,     # Pydantic model for typed responses
-    structured_outputs=True,           # Use native structured outputs (provider support required)
-    use_json_mode=False,               # Force JSON mode
 
-    # --- Session & Storage ---
-    db=SqliteDb(db_file="agents.db"),  # Database for session persistence
-    session_id="session-123",          # Persistent session identifier
-    user_id="user@example.com",        # User identifier for memory/learning
-    add_history_to_context=True,       # Include conversation history
-    num_history_runs=5,                # Number of past runs to include
-
-    # --- Memory ---
-    memory_manager=MemoryManager(...), # User memory manager
-    enable_agentic_memory=True,        # Agent decides when to store/recall (efficient)
-    update_memory_on_run=False,        # Auto-extract after every run (guaranteed but costly)
-
-    # --- Knowledge (RAG) ---
-    knowledge=knowledge_base,          # KnowledgeBase instance
-    add_knowledge_to_context=True,     # Add retrieved docs to context
-
-    # --- Learning ---
-    learning=LearningMachine(...),     # Or learning=True for defaults
-
-    # --- State ---
-    session_state={"key": "value"},    # Shared state dict
-    add_session_state_to_context=True, # Include state in context
-
-    # --- Reasoning ---
-    reasoning=True,                    # Enable chain-of-thought
-    reasoning_model=Model(...),        # Separate model for reasoning
-    reasoning_min_steps=1,
-    reasoning_max_steps=10,
-
-    # --- Hooks & Guardrails ---
-    pre_hooks=[guardrail_fn],          # Run before agent response
-    post_hooks=[eval_fn],              # Run after agent response
-
-    # --- Context Enrichment ---
-    add_datetime_to_context=True,      # Add current date/time
-    add_location_to_context=False,     # Add user location
-    add_name_to_context=False,         # Add agent name
-
-    # --- Retry & Reliability ---
-    retries=0,                         # Number of retries on failure
-    delay_between_retries=1,           # Seconds between retries
-    exponential_backoff=False,         # Exponential backoff on retries
-
-    # --- Streaming ---
-    stream=True,                       # Enable streaming
-    stream_events=False,               # Enable event-based streaming
-
-    # --- Debug ---
-    debug_mode=False,                  # Detailed logging
-    telemetry=True,                    # Usage telemetry (set False to disable)
-    markdown=True,                     # Format output as markdown
-)
+async def astream_answer(message: str) -> None:
+    async for event in agent.arun(message, stream=True, stream_events=True):
+        if event.event == RunEvent.run_content and isinstance(event.content, str):
+            print(event.content, end="", flush=True)
+        elif event.event in (
+            RunEvent.run_paused,
+            RunEvent.run_cancelled,
+            RunEvent.run_error,
+        ):
+            print(event.event)
 ```
 
-## Key Methods
+`stream_events=True` adds lifecycle/tool events. Pause, cancellation, and error events can appear without it. This example only renders output; services must handle those outcomes. A terminal event after cancellation is not success. Text deltas are not completed structured output.
 
-### run() / arun()
+## Configure Only What the Task Needs
 
-Execute the agent and get a RunOutput.
+| Task | Agent settings |
+| --- | --- |
+| Identity | Stable `id`; caller-scoped `user_id` and `session_id` per run |
+| Behavior | `description`, `instructions`, `markdown` |
+| Typed input/output | `input_schema`, `output_schema`; [typed extraction](examples.md) |
+| Tools | `tools`, `tool_call_limit`, provider-supported `tool_choice`; [Tools](tools.md) |
+| Validation | `pre_hooks`, `post_hooks`; [guardrails](https://docs.agno.com/guardrails/overview.md) |
 
-```python
-# Synchronous
-response = agent.run("Your message")
-print(response.content)  # String or Pydantic model if output_schema set
+An explicit `system_message` replaces the generated message; prefer `instructions` to retain assembled context. Configure native reasoning on the model adapter; `reasoning_model` selects a separate model. Debug logs can expose prompts and tool data.
 
-# Asynchronous
-response = await agent.arun("Your message")
+## History, Memory, State, and Knowledge Are Different
 
-# With streaming
-for chunk in agent.run("Your message", stream=True):
-    print(chunk)
+| Need | Configuration and constraints |
+| --- | --- |
+| Continue one conversation | `db`, `add_history_to_context=True`, bounded `num_history_runs` or `num_history_messages`; keep the session ID stable |
+| Recall facts across sessions | Configure [LearningMachine](learning.md); extraction can miss facts and add model calls |
+| Track application state | `session_state`; tools use injected `RunContext`. `add_session_state_to_context=True` exposes state to the model |
+| Supply runtime services/data | `dependencies`; tools read `run_context.dependencies`. Expose only safe data via `add_dependencies_to_context` |
+| Search documents on demand | Configured `Knowledge` with `search_knowledge=True` exposes retrieval; see [Knowledge](knowledge.md) |
+| Retrieve documents each run | `add_knowledge_to_context=True` with configured knowledge/retrieval |
 
-# With multimodal inputs
-from agno.media import Image
-response = agent.run(
-    "Describe this image",
-    images=[Image(url="https://example.com/photo.jpg")],
-)
+`max_tool_calls_from_history` trims prompt history, not stored history. Summaries and `compress_tool_results=True` can reduce context but add model calls and lose detail. Do not combine compression with `offload_tool_results`. See [context engineering](https://docs.agno.com/context/agent/overview.md).
 
-# Override parameters per-run
-response = agent.run(
-    "Your message",
-    session_id="custom-session",
-    user_id="user@example.com",
-    debug_mode=True,
-)
-```
+Isolate shared tools, credentials, and databases by caller.
 
-### print_response() / aprint_response()
+## Add Context without a Large Tool List
 
-Execute and print formatted output to console.
+- **[Context Providers](https://docs.agno.com/context-providers/using-providers.md):** pass `tools=provider.get_tools()` and `instructions=provider.instructions()`. Scope source credentials; follow resource-owning providers' async setup/close lifecycle.
+- **[Skills](https://docs.agno.com/skills/loading-skills.md):** load trusted instructions/references/scripts with `Skills` and `LocalSkills` from `agno.skills`, then pass `skills=...`. Verify loading; scripts can execute code.
+- **[FileSystem](https://docs.agno.com/filesystem/overview.md):** durable agent notes on database or local-disk backends, not secrets or unrestricted host access. Scope namespaces and users explicitly. Check installed-version scoping and migration requirements.
 
-```python
-# Basic
-agent.print_response("Your message", stream=True)
+## Media Inputs
 
-# Async
-await agent.aprint_response("Your message", stream=True)
+For `run()` / `arun()`, pass `images`, `audio`, `videos`, or `files` with `Image`, `Audio`, `Video`, or `File` from `agno.media`. Use accessible URLs, paths, or supported content. Verify the [adapter and model support the modality](https://docs.agno.com/models/compatibility.md).
 
-# With options
-agent.print_response(
-    "Your message",
-    stream=True,
-    markdown=True,
-    show_reasoning=True,
-    session_id="my-session",
-    user_id="user@example.com",
-)
-```
+## Pause, Resume, or Serve
 
-### Memory Methods
+- Resolve paused `active_requirements`, then use `continue_run()` / `acontinue_run()`; see [approval](tools.md).
+- `cancel_run(run_id)` / `acancel_run(run_id)` do not reverse external side effects.
+- See [AgentOS](agentos.md) for HTTP, authentication, and durable work. Async runs are not automatically durable.
 
-```python
-# Get user memories
-memories = agent.get_user_memories(user_id="user@example.com")
-```
+Check uncommon settings in the version-matched [Agent reference](https://docs.agno.com/reference/agents/agent.md).
 
-## RunOutput
+## More Docs
 
-The response object from `agent.run()`:
-
-```python
-response = agent.run("message")
-
-response.content          # str or BaseModel (if output_schema)
-response.messages         # List of messages exchanged
-response.metrics          # Token usage, timing, etc.
-response.run_id           # Unique run identifier
-response.session_id       # Session identifier
-```
-
-## Input Types
-
-Agents accept flexible input:
-
-```python
-# String
-agent.run("Hello")
-
-# Message object
-from agno.models.message import Message
-agent.run(Message(role="user", content="Hello"))
-
-# List of messages
-agent.run([
-    Message(role="user", content="Hello"),
-    Message(role="assistant", content="Hi!"),
-    Message(role="user", content="Follow up"),
-])
-
-# Dict
-agent.run({"role": "user", "content": "Hello"})
-
-# Pydantic model (when using input schema)
-agent.run(MyInputModel(field="value"))
-```
-
-## Multimodal Support
-
-```python
-from agno.media import Audio, Image, Video, File
-
-agent.run("Describe this", images=[Image(url="https://...")])
-agent.run("Transcribe this", audio=[Audio(filepath="audio.mp3")])
-agent.run("Analyze this", videos=[Video(url="https://...")])
-agent.run("Read this", files=[File(filepath="doc.pdf")])
-```
+- [Building agents](https://docs.agno.com/agents/building-agents.md)
+- [Official agent cookbook](https://github.com/agno-agi/agno/tree/main/cookbook/02_agents)

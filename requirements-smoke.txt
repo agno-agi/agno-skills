@@ -1,0 +1,2 @@
+# Published baseline used by the offline API and example smoke tests.
+agno[os,openai,sqlite,mcp,postgres,pgvector,cel]==3.1.1

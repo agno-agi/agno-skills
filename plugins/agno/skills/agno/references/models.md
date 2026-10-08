@@ -1,101 +1,63 @@
 # Model Providers Reference
 
-## Usage
+Docs: [Models](https://docs.agno.com/models/overview.md).
 
-Models can be specified as a class instance or string shorthand:
+Keep the user's provider, endpoint, and model unless a required capability is missing. Compatibility depends on all three: adapter, endpoint, and model ID.
+
+## Configure an Explicit Adapter
+
+Requires Agno and the provider SDK. For a new environment: `uv pip install "agno[openai]"`; otherwise retain pins. Construction needs no network or key:
 
 ```python
 from agno.agent import Agent
+from agno.models.openai import OpenAIResponses
 
-# Class instance (full control)
-from agno.models.openai import OpenAIChat
-agent = Agent(model=OpenAIChat(id="gpt-4o"))
-
-# String shorthand
-agent = Agent(model="openai:gpt-4o")
-```
-
-## Supported Providers
-
-### Tier 1 - Major Cloud Providers
-
-| Provider | Class | Import | Example |
-|----------|-------|--------|---------|
-| OpenAI | `OpenAIChat` | `agno.models.openai` | `OpenAIChat(id="gpt-4o")` |
-| OpenAI | `OpenAIResponses` | `agno.models.openai` | `OpenAIResponses(id="gpt-5.2")` |
-| Anthropic | `Claude` | `agno.models.anthropic` | `Claude(id="claude-sonnet-4-5-20250929")` |
-| Google | `Gemini` | `agno.models.google` | `Gemini(id="gemini-3-flash-preview")` |
-| AWS Bedrock | `Bedrock` | `agno.models.aws` | `Bedrock(id="anthropic.claude-v2")` |
-| AWS Claude | `AWSClaude` | `agno.models.aws` | `AWSClaude(id="claude-sonnet-4-5-20250929")` |
-| Azure | `AzureOpenAI` | `agno.models.azure` | `AzureOpenAI(id="gpt-4o", azure_endpoint="...")` |
-| Azure | `AzureAIFoundry` | `agno.models.azure` | `AzureAIFoundry(id="...", azure_endpoint="...")` |
-| Vertex AI | `VertexAIClaude` | `agno.models.vertexai` | `VertexAIClaude(id="claude-sonnet-4-5-20250929")` |
-
-### Tier 2 - Inference Providers
-
-| Provider | Class | Import | Example |
-|----------|-------|--------|---------|
-| Groq | `Groq` | `agno.models.groq` | `Groq(id="llama-3.3-70b-versatile")` |
-| Mistral | `Mistral` | `agno.models.mistral` | `Mistral(id="mistral-large-latest")` |
-| Cohere | `Cohere` | `agno.models.cohere` | `Cohere(id="command-r-plus")` |
-| Fireworks | `Fireworks` | `agno.models.fireworks` | `Fireworks(id="...")` |
-| Together | `Together` | `agno.models.together` | `Together(id="...")` |
-| DeepInfra | `DeepInfra` | `agno.models.deepinfra` | `DeepInfra(id="...")` |
-| DeepSeek | `DeepSeek` | `agno.models.deepseek` | `DeepSeek(id="deepseek-chat")` |
-| Perplexity | `Perplexity` | `agno.models.perplexity` | `Perplexity(id="...")` |
-| OpenRouter | `OpenRouter` | `agno.models.openrouter` | `OpenRouter(id="...")` |
-| Cerebras | `Cerebras` | `agno.models.cerebras` | `Cerebras(id="...")` |
-| Sambanova | `Sambanova` | `agno.models.sambanova` | `Sambanova(id="...")` |
-| Nebius | `Nebius` | `agno.models.nebius` | `Nebius(id="...")` |
-| Nvidia | `Nvidia` | `agno.models.nvidia` | `Nvidia(id="...")` |
-
-### Tier 3 - Local & Self-hosted
-
-| Provider | Class | Import | Example |
-|----------|-------|--------|---------|
-| Ollama | `OllamaChat` | `agno.models.ollama` | `OllamaChat(id="llama3")` |
-| LM Studio | `LMStudio` | `agno.models.lmstudio` | `LMStudio(id="...")` |
-| Llama.cpp | `LlamaCpp` | `agno.models.llama_cpp` | `LlamaCpp(id="...")` |
-| VLLM | `VLLM` | `agno.models.vllm` | `VLLM(id="...")` |
-| HuggingFace | `HuggingFace` | `agno.models.huggingface` | `HuggingFace(id="...")` |
-
-### Tier 4 - Routing & Proxy
-
-| Provider | Class | Import | Example |
-|----------|-------|--------|---------|
-| LiteLLM | `LiteLLMOpenAI` | `agno.models.litellm` | `LiteLLMOpenAI(id="...")` |
-| OpenAILike | `OpenAILike` | `agno.models.openai` | `OpenAILike(id="...", api_key="...", base_url="...")` |
-| Portkey | `Portkey` | `agno.models.portkey` | `Portkey(id="...")` |
-| LangDB | `LangDB` | `agno.models.langdb` | `LangDB(id="...")` |
-| Requesty | `Requesty` | `agno.models.requesty` | `Requesty(id="...")` |
-
-## Common Model Parameters
-
-```python
-from agno.models.openai import OpenAIChat
-
-model = OpenAIChat(
-    id="gpt-4o",                       # Model identifier
-    api_key="sk-...",                   # API key (or set env var)
-    temperature=0.7,                   # Sampling temperature
-    max_tokens=4096,                   # Max output tokens
-    top_p=1.0,                         # Nucleus sampling
-    frequency_penalty=0.0,             # Frequency penalty
-    presence_penalty=0.0,              # Presence penalty
-    stop=["END"],                      # Stop sequences
+model = OpenAIResponses(
+    id="gpt-6.1-sol",
+    max_output_tokens=1024,
+    timeout=30.0,
 )
+agent = Agent(model=model)
 ```
 
-## OpenAI-Compatible Providers
+Execution needs `OPENAI_API_KEY`, network access, and account access to the model. Store secrets outside source code.
 
-Use `OpenAILike` for any OpenAI-compatible API:
+Prefer an explicit adapter when API family/configuration matters; string aliases and defaults can change between releases.
 
-```python
-from agno.models.openai import OpenAILike
+## Find the Right Integration
 
-model = OpenAILike(
-    id="my-model",
-    api_key="my-api-key",
-    base_url="https://my-provider.com/v1",
-)
-```
+Selected imports follow. Install the provider SDK, configure authentication, and select an authorized model ID.
+
+| Provider/path | Import | Configuration to verify |
+| --- | --- | --- |
+| OpenAI Responses API | `from agno.models.openai import OpenAIResponses` | `OPENAI_API_KEY`, model access |
+| Anthropic | `from agno.models.anthropic import Claude` | Anthropic SDK, `ANTHROPIC_API_KEY` |
+| Google Gemini | `from agno.models.google import Gemini` | `google-genai`, Google API or Vertex configuration |
+| AWS Bedrock Converse | `from agno.models.aws import AwsBedrock` | AWS SDKs, region, credentials, model access |
+| Azure OpenAI Responses | `from agno.models.azure import AzureOpenAIResponses` | OpenAI SDK, Azure endpoint, `id` = deployment name, supported API version |
+
+## OpenAI-Compatible Endpoints
+
+Use the adapter for the actual protocol:
+
+- Chat Completions-compatible API: `OpenAILike` from `agno.models.openai.like`.
+- Open Responses-compatible API: `OpenResponses` from `agno.models.openai`.
+- Prefer a dedicated provider adapter when it implements features your application needs.
+
+Set `id`, `base_url`, and `api_key` explicitly to the project's authorized values. API-format compatibility does **not** guarantee tools, structured output, streaming, or media support.
+
+## Parameters Are Not Universal
+
+- `OpenAIResponses` uses `max_output_tokens`, not `max_tokens`. Reasoning, sampling, verbosity, and service-tier values are model-specific.
+- Set `output_schema` on the Agent or run; validate [typed results](examples.md).
+- Provider request retries and Agent run retries differ. Make side-effecting tools idempotent before retrying.
+- Provider storage and Agno `db` persistence are separate privacy settings.
+- Use [async Agent APIs](agents.md), not an invented async model class; custom I/O must also be nonblocking.
+
+## More Docs
+
+- [Provider index](https://docs.agno.com/models/providers/model-index.md) and [compatibility](https://docs.agno.com/models/compatibility.md)
+- [OpenAI Responses](https://docs.agno.com/models/providers/native/openai/responses/overview.md)
+- [OpenAI-compatible APIs](https://docs.agno.com/models/providers/openai-like.md)
+- [Caching](https://docs.agno.com/models/cache-response.md) and [fallback models](https://docs.agno.com/models/fallback-models.md)
+- [Official model cookbook](https://github.com/agno-agi/agno/tree/main/cookbook/90_models)

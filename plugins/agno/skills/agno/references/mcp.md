@@ -1,169 +1,93 @@
-# MCP Integration Reference
+# MCP
 
-## Imports
+| Direction | Guide |
+| --- | --- |
+| Consume server tools | [MCP tools](https://docs.agno.com/tools/mcp/overview.md) |
+| Publish AgentOS components/tools | [AgentOS MCP](https://docs.agno.com/agent-os/mcp/mcp.md) |
+| Coding-client access to docs | [Coding agents](https://docs.agno.com/coding-agents.md) |
+| Connect clients to your runtime | [CLI connect](https://docs.agno.com/cli/connect.md) |
 
-```python
-from agno.tools.mcp import MCPTools, MultiMCPTools
-```
+## Client Lifecycle
 
-## Transport Types
+Keep `MCPTools` open through the full async run/stream and close through the owning lifespan. Use one instance per server. Prefix colliding names and expose only needed functions.
 
-| Transport | Use Case | Parameter |
-|-----------|----------|-----------|
-| stdio | Local CLI tools (npx, uvx) | `command="uvx mcp-server-git"` |
-| sse | Server-Sent Events (legacy) | `transport="sse", url="http://..."` |
-| streamable-http | Production HTTP servers | `transport="streamable-http", url="http://..."` |
+For [dynamic headers](https://docs.agno.com/tools/mcp/dynamic-headers.md), discovery has no run context and callback errors may leave static headers. Enforce server-side authentication; never share user tokens globally or persist them in run metadata.
 
-## MCPTools - Single Server
+Treat stdio packages as executable dependencies. Use the server's timeouts and transport requirements.
 
-### stdio Transport (default for commands)
+## Serving and Identity
+
+`MCPConfig(tools=[...])` defaults to no built-in/lifecycle tools; opt in explicitly. `mcp=True` enables built-ins. Server-card visibility is separate from tool authorization.
+
+Follow [OAuth](https://docs.agno.com/examples/agent-os/mcp/oauth-builtin.md) for hosted clients. REST JWT scopes, MCP identity, transport state, and user isolation are separate controls. Client setup is a requested configuration change.
+
+Inspect `agno/tools/mcp/` and `agno/os/mcp.py` for omitted discovery/header/lifecycle/replica behavior; follow their OAuth imports when authentication is involved.
+
+## Code Patterns
+
+### Consume One Server
+
+Standalone async client; requires `agno[mcp,openai]`, network access, and model credentials.
 
 ```python
 import asyncio
+
 from agno.agent import Agent
+from agno.models.openai import OpenAIResponses
 from agno.tools.mcp import MCPTools
 
-async def run():
-    async with MCPTools(command="uvx mcp-server-git") as tools:
-        agent = Agent(tools=[tools])
-        await agent.aprint_response("What's the project license?", stream=True)
 
-asyncio.run(run())
-```
-
-### Streamable HTTP Transport
-
-```python
-async def run():
+async def main():
     async with MCPTools(
+        url="https://mcp.agno.com",
         transport="streamable-http",
-        url="https://docs.agno.com/mcp",
-    ) as tools:
-        agent = Agent(tools=[tools], markdown=True)
-        await agent.aprint_response("What is Agno?", stream=True)
-
-asyncio.run(run())
-```
-
-### Manual Connection Lifecycle
-
-```python
-async def run():
-    tools = MCPTools(command="uvx mcp-server-git")
-    await tools.connect()
-
-    try:
-        agent = Agent(tools=[tools])
-        await agent.aprint_response("query", stream=True)
-    finally:
-        await tools.close()
-```
-
-## MCPTools Constructor
-
-```python
-MCPTools(
-    command="uvx mcp-server-git",      # stdio command (auto-detects stdio transport)
-    url="http://localhost:8000/mcp",   # HTTP/SSE URL
-    transport="streamable-http",       # "stdio", "sse", "streamable-http"
-    env={"API_KEY": "..."},            # Environment variables for subprocess
-    timeout_seconds=10,                # Read timeout
-    include_tools=["tool1", "tool2"],  # Only include specific tools
-    exclude_tools=["tool3"],           # Exclude specific tools
-    tool_name_prefix="myserver",       # Prefix tool names (avoid collisions)
-    refresh_connection=False,          # Refresh connection per agent run
-    header_provider=lambda: {"Authorization": f"Bearer {get_token()}"},  # Dynamic headers
-)
-```
-
-## MultiMCPTools - Multiple Servers
-
-Connect to multiple MCP servers simultaneously:
-
-```python
-from agno.tools.mcp import MultiMCPTools
-
-async def run():
-    tools = MultiMCPTools(
-        # stdio servers (commands)
-        commands=[
-            "npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt",
-            "npx -y @modelcontextprotocol/server-brave-search",
-        ],
-        # HTTP servers (urls)
-        urls=["http://localhost:8000/mcp"],
-        urls_transports=["streamable-http"],
-        # Shared config
-        env={"BRAVE_API_KEY": os.getenv("BRAVE_API_KEY")},
         timeout_seconds=30,
-    )
-    await tools.connect()
+    ) as docs_tools:
+        agent = Agent(
+            model=OpenAIResponses(id="gpt-6.1-sol"),
+            tools=[docs_tools],
+        )
+        await agent.aprint_response("How do Agno workflows work?", stream=True)
 
-    agent = Agent(tools=[tools], markdown=True)
-    await agent.aprint_response("Find listings in Barcelona", stream=True)
-    await tools.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-## MultiMCPTools Constructor
+### Serve Selected AgentOS Tools
+
+Save as `mcp_app.py`; requires `agno[os,mcp,openai,sqlite]`. This local-only server has no configured authentication.
 
 ```python
-MultiMCPTools(
-    commands=["cmd1", "cmd2"],         # List of stdio commands
-    urls=["http://..."],               # List of HTTP/SSE URLs
-    urls_transports=["streamable-http"],  # Transport per URL
-    env={"KEY": "value"},              # Shared environment variables
-    timeout_seconds=30,                # Read timeout
-    include_tools=["tool1"],           # Filter tools
-    exclude_tools=["tool2"],
-    tool_name_prefix="prefix",
-    refresh_connection=False,
+from agno.agent import Agent
+from agno.db.sqlite import SqliteDb
+from agno.models.openai import OpenAIResponses
+from agno.os import AgentOS, MCPConfig
+
+db = SqliteDb(db_file="tmp/mcp.db")
+assistant = Agent(
+    id="assistant",
+    model=OpenAIResponses(id="gpt-6.1-sol"),
+    db=db,
 )
-```
-
-## Tool Filtering
-
-```python
-# Only include specific tools
-MCPTools(command="...", include_tools=["read_file", "write_file"])
-
-# Exclude tools
-MCPTools(command="...", exclude_tools=["delete_file"])
-
-# Prefix tool names to avoid collisions with multiple servers
-MCPTools(command="...", tool_name_prefix="git")
-# Tools become: git_read_file, git_write_file, etc.
-```
-
-## Dynamic Headers (Auth)
-
-```python
-MCPTools(
-    transport="streamable-http",
-    url="https://api.example.com/mcp",
-    header_provider=lambda: {
-        "Authorization": f"Bearer {get_fresh_token()}"
-    },
+agent_os = AgentOS(
+    agents=[assistant],
+    db=db,
+    mcp=MCPConfig(
+        tools=[assistant.as_tool(name="ask_assistant", description="Ask the assistant")],
+        lifecycle_tools=True,
+    ),
 )
+app = agent_os.get_app()
+
+if __name__ == "__main__":
+    agent_os.serve(app="mcp_app:app", host="127.0.0.1", port=7777, reload=False)
 ```
 
-## MCPToolbox (Toolbox Servers)
+### Connect and Verify
 
-For MCP Toolbox for Databases and similar toolbox servers:
+Client setup command; use the actual AgentOS base URL. Run only when connecting clients is requested.
 
-```python
-from agno.tools.mcp import MCPToolbox
-
-toolbox = MCPToolbox(
-    url="http://localhost:5000",
-    toolsets=["my-toolset"],           # Filter by toolset
-    transport="streamable-http",
-)
+```bash
+uvx agno connect --url http://localhost:7777
 ```
-
-## Best Practices
-
-1. **Always close connections** - Use `async with` or try/finally
-2. **Set reasonable timeouts** - Default is 10s, increase for slow servers
-3. **Use tool_name_prefix** with multiple servers to avoid name collisions
-4. **MCP is async-only** - All MCP operations require async/await
-5. **Use refresh_connection=True** if server state changes between runs
