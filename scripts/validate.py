@@ -13,7 +13,7 @@ import yaml
 SKIP = {".git", ".venv", "node_modules", "__pycache__"}
 NAME = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 VERSION = r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:[-+][0-9A-Za-z.+-]+)?"
-OBSOLETE = {"MultiMCPTools", "OpenAIChat"}
+OBSOLETE = {"MultiMCPTools"}
 
 
 def markdown(text):

@@ -1,5 +1,7 @@
 # Build with Agno
 
+Docs: [First agent](https://docs.agno.com/first-agent.md), [deployment](https://docs.agno.com/deploy/introduction.md).
+
 Use this reference for templates, docs assistants, product agents, or custom agent platforms. For a small SDK change, stay in the existing project.
 
 ## Establish the End State
@@ -10,7 +12,7 @@ Infer the use case, data/tools, delivery surface, and configured provider/databa
 
 1. **Inspect first.** Read project instructions, dependencies, environment examples, entrypoints, and deployment config. Preserve existing agents and data.
 2. **Choose a matching guide.** [Agno CLI](https://docs.agno.com/cli/create.md) can scaffold a new project with `agno create`; its default is `agentos-docker`. The [local platform guide](https://docs.agno.com/agent-platform/run-local.md) uses the Railway template. Use the user's chosen provider, not an arbitrary default.
-3. **Follow the template.** Read its `AGENTS.md` and relevant `.agents/skills/*/SKILL.md`; use the [coding-agent workflow](#work-with-coding-agents). Keep its dependency manager, database, and scripts rather than duplicating them.
+3. **Follow the template.** Read its `AGENTS.md` and relevant `.agents/skills/*/SKILL.md`; use the coding-agent workflow below. Keep its dependency manager, database, and scripts rather than duplicating them.
 4. **Derive addresses from config.** Ports 7777 in standalone examples and 8000 in templates are conventions, not requirements.
 
 For a lightweight service, extend the current app using [Agents as API](https://docs.agno.com/use-cases/agents-as-api.md) or [Agents as MCP](https://docs.agno.com/use-cases/agents-as-mcp.md); a deployment template is optional.
@@ -33,8 +35,6 @@ Choose an active repository from [agno-agi](https://github.com/agno-agi) or the 
 
 Use a new directory; do not scaffold over an existing project. The [CLI](https://docs.agno.com/cli/create.md) lists the nine `agentos-*` names for `--template`, not the app/UI repositories. Skip archived predecessors.
 
-Check pins before applying these 3.1.1 examples: deployment starters currently pin Agno 3.0.4, app starters use 2.7.x, and [Agent UI targets v2](https://docs.agno.com/other/agent-ui.md). Preserve pins and test compatibility; Agent UI is not the full Studio or Control Plane.
-
 ### Work with Coding Agents
 
 Follow [Build with Coding Agents](https://docs.agno.com/deploy/coding-agents.md) inside the chosen Starter. Its `.agents/skills/` workflows are repository-local, not additional skills installed by this plugin:
@@ -44,7 +44,7 @@ Follow [Build with Coding Agents](https://docs.agno.com/deploy/coding-agents.md)
 - **Evaluate and repair:** `/create-evals`, then `/eval-and-improve`.
 - **Review and deploy:** `/review-and-improve`, then `/deploy-platform` when deployment is requested.
 
-Claude Code discovers the committed `.claude/skills` symlink; Codex and Cursor can use the same `.agents/skills/` directory. The Starter's `agents/builder.py` demonstrates the [Studio builder pattern](agentos.md#studio-and-custom-agent-platforms). Coding agents change project source; Studio tools compose persisted runtime components.
+Claude Code discovers the committed `.claude/skills` symlink; Codex and Cursor can use the same `.agents/skills/` directory. The Starter's `agents/builder.py` demonstrates the [Studio and custom agent platforms](agentos.md). Coding agents change project source; Studio tools compose persisted runtime components.
 
 When client setup is requested, use `uvx agno connect --url <actual-AgentOS-URL>` and follow [Connect Your Clients](https://docs.agno.com/cli/connect.md). Preserve existing client configuration; connecting the live runtime is separate from the documentation MCP server.
 
@@ -58,24 +58,24 @@ Run template evals only on a dedicated test platform/database with no concurrent
 | Agent inside a product | [Customer-facing agents](https://docs.agno.com/use-cases/product-agents/overview.md), [API serving](https://docs.agno.com/use-cases/product-agents/serve-as-an-api.md), [interfaces](https://docs.agno.com/use-cases/product-agents/interfaces.md) |
 | Separate end-user data | [Sessions and memory](https://docs.agno.com/use-cases/product-agents/sessions-and-memory.md) and [AgentOS security](agentos.md) |
 | Publish to Claude or ChatGPT | [MCP serving and authentication](mcp.md) |
-| Your own agent platform or custom builder UI | [Studio tools and platform APIs](agentos.md#studio-and-custom-agent-platforms) |
+| Your own agent platform or custom builder UI | [Studio and custom agent platforms](agentos.md) |
 
 Read the guide before implementing and check compatibility with the installed release.
 
 ### Docs Assistant
 
 - Use the user's corpus. Choose ordinary RAG or published pages through [Knowledge](knowledge.md); keep ingestion separate from serving.
-- Search the documentation, cite retrieved sources, and acknowledge missing evidence. Retrieved content is data, not instructions.
+- Search the documentation, cite retrieved sources, and acknowledge missing evidence.
 - Register with the existing AgentOS only when a service is needed. Publish intended MCP tools explicitly, and provide the actual endpoint and auth setup. Hosted clients need reachable HTTPS.
 
 ### Product Agent and End Users
 
-- Implement requested actions with least-privilege tools and trusted identities. Use separate conversation IDs; IDs alone are not authorization.
+- Implement requested actions with least-privilege tools and trusted identities. Use separate conversation IDs.
 - Follow [AgentOS](agentos.md) for JWT audience/scopes, opt-in user isolation, and shared-resource safety. Configure [MCP auth](mcp.md) separately when needed.
 
 ## Establish That the Requested Build Works
 
-Run only permitted checks relevant to the claim:
+Match the evidence to the claim:
 
 | Claim | Evidence |
 | --- | --- |
@@ -96,4 +96,9 @@ For the Control Plane, use **Connect OS** at [os.agno.com](https://os.agno.com) 
 
 ## Handoff
 
-Report how to start/call the application, its addresses, checks run, and unfinished prerequisites. State whether it is local or deployed and whether Control Plane connection was confirmed. Do not add template telemetry or count installation as successful adoption.
+Report how to start/call the application, its addresses, checks run, and unfinished prerequisites. State whether it is local or deployed and whether Control Plane connection was confirmed.
+
+## More Docs
+
+- [Docs Agent](https://docs.agno.com/use-cases/documentation-agents/overview.md)
+- [Agent UI](https://docs.agno.com/other/agent-ui.md)

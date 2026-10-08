@@ -1,5 +1,7 @@
 # Model Providers Reference
 
+Docs: [Models](https://docs.agno.com/models/overview.md).
+
 Keep the user's provider, endpoint, and model unless a required capability is missing. Compatibility depends on all three: adapter, endpoint, and model ID.
 
 ## Configure an Explicit Adapter
@@ -20,7 +22,6 @@ agent = Agent(model=model)
 
 Execution needs `OPENAI_API_KEY`, network access, and account access to the model. Store secrets outside source code.
 
-
 Prefer an explicit adapter when API family/configuration matters; string aliases and defaults can change between releases.
 
 ## Find the Right Integration
@@ -35,10 +36,6 @@ Selected imports follow. Install the provider SDK, configure authentication, and
 | AWS Bedrock Converse | `from agno.models.aws import AwsBedrock` | AWS SDKs, region, credentials, model access |
 | Azure OpenAI Responses | `from agno.models.azure import AzureOpenAIResponses` | OpenAI SDK, Azure endpoint, `id` = deployment name, supported API version |
 
-
-
-For setup, imports, authentication, and available models, use the [provider index](https://docs.agno.com/models/providers/model-index.md) or [Supported Models](https://github.com/agno-agi/agno/tree/main/cookbook/90_models). Supported features vary by adapter, endpoint, and model.
-
 ## OpenAI-Compatible Endpoints
 
 Use the adapter for the actual protocol:
@@ -49,14 +46,18 @@ Use the adapter for the actual protocol:
 
 Set `id`, `base_url`, and `api_key` explicitly to the project's authorized values. API-format compatibility does **not** guarantee tools, structured output, streaming, or media support.
 
-See [OpenAI-compatible models](https://docs.agno.com/models/providers/openai-like.md). `OpenResponses` defaults to `store=False` without automatic `previous_response_id` chaining; this does not control provider retention policy.
-
 ## Parameters Are Not Universal
 
 - `OpenAIResponses` uses `max_output_tokens`, not `max_tokens`. Reasoning, sampling, verbosity, and service-tier values are model-specific.
-- Set `output_schema` on the Agent or run; validate [typed results](examples.md#2-typed-extraction).
+- Set `output_schema` on the Agent or run; validate [typed results](examples.md).
 - Provider request retries and Agent run retries differ. Make side-effecting tools idempotent before retrying.
 - Provider storage and Agno `db` persistence are separate privacy settings.
-- Use [async Agent APIs](agents.md#choose-the-run-api), not an invented async model class; custom I/O must also be nonblocking.
+- Use [async Agent APIs](agents.md), not an invented async model class; custom I/O must also be nonblocking.
 
-Sources: [compatibility](https://docs.agno.com/models/compatibility.md) and [OpenAI Responses](https://docs.agno.com/models/providers/native/openai/responses/overview.md). This reference targets Agno 3.1.1; check older pinned versions before adapting.
+## More Docs
+
+- [Provider index](https://docs.agno.com/models/providers/model-index.md) and [compatibility](https://docs.agno.com/models/compatibility.md)
+- [OpenAI Responses](https://docs.agno.com/models/providers/native/openai/responses/overview.md)
+- [OpenAI-compatible APIs](https://docs.agno.com/models/providers/openai-like.md)
+- [Caching](https://docs.agno.com/models/cache-response.md) and [fallback models](https://docs.agno.com/models/fallback-models.md)
+- [Official model cookbook](https://github.com/agno-agi/agno/tree/main/cookbook/90_models)

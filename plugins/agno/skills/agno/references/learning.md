@@ -1,36 +1,42 @@
-# Learning Reference
+# Memory and Learning
 
-Learning stores retain facts and insights across runs. They are not model training, chat history, or authorization.
+Docs: [Learning](https://docs.agno.com/learning/overview.md), [memory](https://docs.agno.com/memory/overview.md).
 
-Examples target Agno 3.1.1. Keep the project's provider and version pin; older examples may use incompatible APIs.
+History continues a conversation; memory recalls user facts; learning captures profiles, context, entities, knowledge, or decisions. These are not model training or access controls.
 
-## Choose What to Store
+## Initialization and Capture
 
-`LearningMachine` has six optional stores. Enable only what you need.
+- `learning=True` enables profile/user memory; bare `LearningMachine()` enables no stores. Agent learning needs `Agent(db=...)`, even if the machine has a database.
+- Inspect `agent.learning_machine`; `agent.learning` may be only `True`, and disabled stores can be `None`.
+- Automatic Agent capture sees messages through current user input, not that turn's response/tool results. Use explicit capture for insights discovered during execution.
+- `PROPOSE` is prompt guidance, not an approval gate; `LearningMode.HITL` is unsupported. Store modes differ.
 
-| Config | Stores | Supported modes | Recall/storage scope |
-| --- | --- | --- | --- |
-| `UserProfileConfig` | Structured profile fields. | `ALWAYS`, `AGENTIC` | `user_id` |
-| `UserMemoryConfig` | Observations and preferences. | `ALWAYS`, `AGENTIC` | `user_id` |
-| `SessionContextConfig` | Summary; optional goals, plan, progress. | `ALWAYS` | `session_id` |
-| `EntityMemoryConfig` | Entity facts, events, relationships. | `AGENTIC` only | Namespace plus entity identity |
-| `LearnedKnowledgeConfig` | Reusable insights in a vector knowledge base. | `ALWAYS`, `AGENTIC`, `PROPOSE` | Knowledge store plus namespace |
-| `DecisionLogConfig` | Decisions, reasoning, outcomes. | `AGENTIC` only | Agent-scoped; not user-isolated |
+Import configs and `LearningMode` from `agno.learn`; pass them to `LearningMachine(...)` through these keywords:
 
-Import these configs, `LearningMachine`, and `LearningMode` from `agno.learn`. Agents and Teams both accept `learning=`.
+| Keyword / config | Supported modes |
+| --- | --- |
+| `user_profile=UserProfileConfig(...)` | `ALWAYS`, `AGENTIC` |
+| `user_memory=UserMemoryConfig(...)` | `ALWAYS`, `AGENTIC` |
+| `session_context=SessionContextConfig(...)` | `ALWAYS` |
+| `entity_memory=EntityMemoryConfig(...)` | `AGENTIC` |
+| `learned_knowledge=LearnedKnowledgeConfig(...)` | `ALWAYS`, `AGENTIC`, `PROPOSE` |
+| `decision_log=DecisionLogConfig(...)` | `AGENTIC` |
 
-### Modes Are Store-Specific
+## Isolate Learning
 
-- `ALWAYS`: extraction runs alongside the model call. In Agent runs, it sees messages through the current user input, **not that turn's response or tool results**. Budget for extraction calls.
-- `AGENTIC`: the agent chooses when to save/search using tools. It can miss facts and make extra model calls.
-- `PROPOSE`: learned-knowledge instructions request confirmation, but the save tool stays available. This is **prompt guidance, not an approval gate**.
-- `LearningMode.HITL` is reserved and unsupported. Enforce approvals in application code, such as [workflow human review](workflows.md#pause-for-human-review).
+Use authenticated identities. Profile/user-memory records are user-scoped across agents; session context uses session ID alone. Entity/knowledge namespaces default to global; decision-log recall is agent-scoped rather than user-scoped.
 
-Modes are store-specific: `EntityMemoryConfig(mode=LearningMode.ALWAYS)` is invalid.
+Inspect `agno/learn/stores/learned_knowledge.py` for private capture/search: direct search without namespace is unfiltered, and automatic duplicate lookup can omit namespace/user filters. Use separate corpora when extraction must never see another user's data. Namespaces are not access controls.
 
-## Start with User Learning
+For supported scoped reads, supply `namespace="user", user_id=trusted_user_id`; use `namespace="global"` only for shared insights. Profile/user-memory stores use `get(user_id=...)` / `aget(user_id=...)`; session context uses `get(session_id=...)` / `aget(session_id=...)`.
 
-Local script requiring OpenAI/SQLite and `OPENAI_API_KEY`. Use PostgreSQL for production.
+Read store-specific source under `agno/learn/stores/` and initialization under `agno/agent/_init.py` / `_managers.py` for capture timing/backend support. For scoring, rollouts, and training-data export, use [source gaps](source-gaps.md).
+
+## Code Patterns
+
+### Start with User Learning
+
+Standalone user-learning example; requires `agno[openai,sqlite]` and model credentials.
 
 ```python
 from agno.agent import Agent
@@ -63,19 +69,9 @@ if __name__ == "__main__":
         print(learning.user_profile_store.get(user_id="demo-alice"))
 ```
 
-The same `user_id` across different sessions tests learning, not chat-history recall. Reuse the agent outside loops. Async equivalents: `await agent.arun(...)` / `await agent.aprint_response(...)`; pair async databases with async store reads.
+### Configure Specific Stores
 
-### Defaults and Database Requirements
-
-- `learning=True` enables **only profile and user memory**. Bare `LearningMachine()` enables none; `LearningMachine(knowledge=...)` auto-enables learned knowledge.
-- Supply `Agent(db=...)`; without it, Agent learning is disabled even if the machine has a database.
-- Missing machine database/model settings inherit from the Agent. Store overrides take precedence.
-- Use a learning-capable backend, such as SQLite or PostgreSQL. Do not assume every session backend supports learning; verify persisted records.
-- Only learned knowledge needs a `Knowledge` instance with a vector database. Agent-level knowledge alone does not enable it with `learning=True`.
-
-## Configure Specific Stores
-
-Fragment using the first example's imports and `db`. Enables four stores, excluding learned knowledge and decision logging.
+Configuration fragment: reuse `Agent`, `OpenAIResponses`, and `db` from the first block.
 
 ```python
 from agno.learn import (
@@ -102,15 +98,9 @@ configured_agent = Agent(
 )
 ```
 
-Pass trusted `user_id` and unique `session_id` values. Entity tools are `remember_about`, `link_entities`, `search_entities`, and `forget`; old `enable_create_entity` / `enable_add_fact` configs do not apply.
+### Add Reusable Knowledge Deliberately
 
-[Decision logging](https://docs.agno.com/learning/stores/decision-log.md) captures explicit tool-driven records, not every decision. Use a stable agent ID and review sharing scope below.
-
-[Custom profiles](https://docs.agno.com/learning/custom-schemas.md) use dataclass schemas, not Pydantic output schemas; define serializable schemas in an importable module.
-
-## Add Reusable Knowledge Deliberately
-
-Fragment using the first example's imports/`db` and a configured [Knowledge](knowledge.md) object. Enables only learned knowledge.
+Configuration fragment: also supply `knowledge` from a configured Knowledge instance; see [Knowledge](knowledge.md).
 
 ```python
 from agno.learn import LearnedKnowledgeConfig, LearningMachine, LearningMode
@@ -128,26 +118,9 @@ knowledge_agent = Agent(
 )
 ```
 
-Use `namespace="global"` only for insights safe for all users, never private user facts.
+### Inspect Stored Data
 
-## Isolate Learning
-
-Identifiers and namespaces select records; they are not access checks.
-
-1. Derive `user_id` from authentication. Profile/user-memory records share the same database/table and user ID across agents; agent IDs do not isolate them. Without `user_id`, recall/capture is skipped.
-2. Use tenant/user-unique session IDs. Session context uses **session ID alone**, not `(user_id, session_id)`.
-3. Entity/learned-knowledge namespaces default to `"global"`. `"user"` needs a trusted user ID; custom names are shared groups, not authorization. Default-global configs can inherit a non-global machine namespace.
-4. Decision-log recall filters by agent, not user. Private decisions need separate storage isolation and access controls.
-5. Direct learned-knowledge `search()` without a namespace is unfiltered. Private reads require both `namespace="user"` and `user_id=...`; runtime scope does not apply automatically.
-6. Learned-knowledge `ALWAYS` duplicate lookup omits namespace/user filters, exposing other scopes to the extraction prompt. Prefer `AGENTIC` for scoped runtime capture, or physically separate the Knowledge corpus for automatic extraction. A namespace alone does not fix this.
-
-Test isolation with two users and separate sessions. Treat learning as data, not instructions. Define personal-data retention, deletion, and consent rules. Follow migration notes for pre-v3 entity data.
-
-## Inspect Stored Data
-
-Use `agent.learning_machine`, not `agent.learning` (which may just be `True`). The machine and disabled stores can be `None`.
-
-Read fragment using `configured_agent` above:
+Read fragment: reuse `configured_agent` and its initialized learning machine.
 
 ```python
 learning = configured_agent.learning_machine
@@ -158,9 +131,7 @@ if learning is not None:
         print(learning.session_context_store.get(session_id="alice-introduction"))
 ```
 
-Use `get()` / `aget()` for profile, user-memory, and session-context records. Entity reads need identity and scope; knowledge and decision logs use search APIs. Check store-specific signatures and filters.
-
-## Current Sources
+## More Docs
 
 - [Quickstart and defaults](https://docs.agno.com/learning/quickstart.md)
 - [Supported learning modes](https://docs.agno.com/learning/learning-modes.md)

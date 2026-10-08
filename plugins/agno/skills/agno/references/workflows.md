@@ -1,8 +1,8 @@
 # Workflow Reference
 
-Use a workflow when code must control execution order, branching, or approval gates. A [team](teams.md) lets a model choose the coordination instead.
+Docs: [Workflows](https://docs.agno.com/workflows/overview.md).
 
-Examples target Agno 3.1.1. Check the installed version, especially for CEL and `HumanReview`.
+Use a workflow when code must control execution order, branching, or approval gates. A [team](teams.md) lets a model choose the coordination instead.
 
 ## Build a Sequential Pipeline
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     print(result.content)
 ```
 
-Create agents once and reuse them. A `Step` takes exactly one of `agent=`, `team=`, `executor=`, or `workflow=` (a nested workflow).
+A `Step` takes exactly one of `agent=`, `team=`, `executor=`, or `workflow=` (a nested workflow).
 
 ### Pass Data Between Steps
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 Inside an existing event loop, call `await main()` instead of `asyncio.run(main())`. Sync streaming uses `for event in workflow.run(..., stream=True)`. For formatted output, use `print_response()` or await `aprint_response()`.
 
-In [Agno 3.1.1](https://github.com/agno-agi/agno/releases/tag/v3.1.1), generator executors can use `from agno.workflow.types import StepProgress` and yield `StepProgress(content=..., data=...)` before their final `StepOutput`.
+Generator executors can use `from agno.workflow.types import StepProgress` and yield `StepProgress(content=..., data=...)` before their final `StepOutput`.
 
 ## Add Branches, Loops, or Parallel Work
 
@@ -131,7 +131,7 @@ Test both branches. Missing CEL support or evaluation errors can trigger fallbac
 
 ## Pause for Human Review
 
-Standalone, model-free example requiring SQLite. Use `HumanReview`, not legacy flat HITL arguments on `Step`.
+Standalone, model-free example requiring SQLite. Configure `HumanReview` on `Step`.
 
 ```python
 from agno.db.sqlite import SqliteDb
@@ -180,10 +180,8 @@ A database preserves paused runs across requests. Save run/session IDs and recon
 - For durable submissions and retry policy, follow the [AgentOS queue guide](https://docs.agno.com/agent-os/background-execution/durable-queue.md). Retries can repeat side effects; make tools idempotent.
 - Resume queue-owned pauses through the [service continuation flow](https://docs.agno.com/agent-os/background-execution/hitl-continuations.md), not an inline SDK continuation.
 
-## Current Sources
+## More Docs
 
 - [Building workflows](https://docs.agno.com/workflows/building-workflows.md) and [running workflows](https://docs.agno.com/workflows/running-workflows.md)
-- [HumanReview](https://docs.agno.com/workflows/hitl/human-review.md) and [pause anatomy](https://docs.agno.com/workflows/hitl/pause-anatomy.md)
-- [CEL expressions](https://docs.agno.com/agent-os/studio/cel-expressions.md)
-- [Durable queue](https://docs.agno.com/agent-os/background-execution/durable-queue.md) and [durable continuations](https://docs.agno.com/agent-os/background-execution/hitl-continuations.md)
+- [HumanReview](https://docs.agno.com/workflows/hitl/human-review.md)
 - [Official workflow cookbook](https://github.com/agno-agi/agno/tree/main/cookbook/04_workflows)

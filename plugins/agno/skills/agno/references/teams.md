@@ -1,8 +1,8 @@
 # Team Reference
 
-Use a team for model-led delegation, or a [workflow](workflows.md) for code-controlled order and approval gates.
+Docs: [Teams](https://docs.agno.com/teams/overview.md).
 
-Examples target Agno 3.1.1 with `OpenAIResponses`. Check the installed version and keep the user's provider/model choice.
+Use a team for model-led delegation, or a [workflow](workflows.md) for code-controlled order and approval gates.
 
 ## Choose a Mode
 
@@ -19,7 +19,6 @@ Modes do not force delegation. Instruct the leader when members must participate
 
 - Broadcast runs members **sequentially with `run()`**, concurrently with `arun()`.
 - `max_iterations` bounds the tasks-mode outer loop, not model calls or task completion. Inspect task state and failures.
-- Explicit `mode` overrides legacy `respond_directly` / `delegate_to_all_members` flags. Avoid old `collaborate` examples.
 
 ## Coordinate Two Specialists
 
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     )
 ```
 
-Reuse members outside request loops. Explicit IDs stabilize delegation identity. Nested `Team` members also need clear roles.
+Explicit IDs stabilize delegation identity. Nested `Team` members also need clear roles.
 
 ## Route, Broadcast, or Plan Tasks
 
@@ -122,9 +121,9 @@ if __name__ == "__main__":
 - `show_members_responses=True`: display member output. For programmatic retention, use `store_member_responses=True`.
 - `output_schema=YourPydanticModel`: typed final output.
 
-Pass trusted `user_id` and `session_id` per run. IDs are not authorization. Scope mutable member/tool state and stored learning to the caller. See [learning isolation](learning.md#isolate-learning).
+Pass trusted `user_id` and `session_id` per run. Scope mutable member/tool state and stored learning to the caller. See [learning isolation](learning.md).
 
-## Current Sources
+## More Docs
 
 - [Delegation and mode semantics](https://docs.agno.com/teams/delegation.md)
 - [Running teams and events](https://docs.agno.com/teams/running-teams.md)

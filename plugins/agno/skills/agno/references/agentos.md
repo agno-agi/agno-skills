@@ -1,6 +1,8 @@
 # AgentOS Services and Operations
 
-Use AgentOS for HTTP, MCP, or messaging access. It runs in your environment; the hosted Control Plane is optional. See [Agents as API](https://docs.agno.com/use-cases/agents-as-api.md) and [Build](build.md).
+Docs: [AgentOS](https://docs.agno.com/agent-os/introduction.md).
+
+Use AgentOS for HTTP, MCP, or messaging access. It runs in your environment; the hosted Control Plane is optional. See [Build](build.md) for deployment.
 
 ## Minimal Local Service
 
@@ -38,31 +40,28 @@ Keep `session_id` for follow-ups and `run_id` for lifecycle actions. Use `stream
 
 ## Production Identity and Data Boundaries
 
-Before exposure, follow [Security & Auth](https://docs.agno.com/features/security-and-auth.md) and [AuthorizationConfig](https://docs.agno.com/reference/agent-os/authorization-config.md). RS256 requires `uv pip install "PyJWT[crypto]"`; `agno[os]` supplies only base PyJWT. Replace the constructor above; configure PostgreSQL separately:
+Follow [Security & Auth](https://docs.agno.com/features/security-and-auth.md) and [managed authorization](source-gaps.md). RS256 requires `uv pip install "PyJWT[crypto]"`. Replace the constructor above; configure PostgreSQL separately:
 
 ```python
 from os import environ
 
-from agno.os.config import AuthorizationConfig
+from agno.os.authz import Authorization
 
 agent_os = AgentOS(
     id="product-agent-os",
     agents=[assistant],
     db=db,
-    authorization=True,
-    authorization_config=AuthorizationConfig(
+    authorization=Authorization(
         verification_keys=[environ["JWT_VERIFICATION_KEY"]],
         algorithm="RS256",
         verify_audience=True,
         audience="product-agent-os",
-        user_isolation=True,
     ),
+    user_isolation=True,
     cors_allowed_origins=["https://app.example.com"],
 )
 app = agent_os.get_app()
 ```
-
-Agno 3.1.1 accepts this documented configuration but deprecates `authorization_config` in favor of `agno.os.authz.Authorization`. Passing both configurations together is rejected.
 
 - Match keys to the issuer and algorithm. Use a verified JWT subject for identity; never trust client-supplied identity or treat session IDs as credentials.
 - Grant minimal scopes such as `agents:assistant:run`. `agent_os:admin` bypasses user isolation.
@@ -99,16 +98,19 @@ Default background work stays in-process. `QueueConfig(durable=True)` opts into 
 - For MCP, expose the builder through `AgentOS(..., mcp=True)` and `run_agent`/`continue_run`. Directly registering default `StudioTools` as MCP tools rejects approval-gated methods; do not remove approval gates just to register them.
 - Treat builder access as privileged. Enforce caller identity, scopes, user isolation, and approval pauses. Review cross-user sharing before publishing; tool selection is not a sandbox.
 
-See [StudioTools](https://docs.agno.com/tools/toolkits/agent-os/studio.md), [Registry](https://docs.agno.com/agent-os/studio/registry.md), and the [Studio cookbooks](https://github.com/agno-agi/agno/tree/v3.1.1/cookbook/05_agent_os/22_studio). These APIs are available in Agno 3.1.1; check template pins before using them.
+See [StudioTools](https://docs.agno.com/tools/toolkits/agent-os/studio.md), [Registry](https://docs.agno.com/agent-os/studio/registry.md), and the [Studio cookbooks](https://github.com/agno-agi/agno/tree/main/cookbook/05_agent_os/22_studio).
 
 ## Capabilities to Add Only When Needed
 
 Start with [MCP](mcp.md) or [interfaces](https://docs.agno.com/use-cases/product-agents/interfaces.md) when needed; install interface dependencies and configure their request verification. Use [PublicSurface](https://docs.agno.com/agent-os/public-surface.md) for selected public components and quotas, not globally disabled auth. See [scheduling](https://docs.agno.com/features/scheduling.md) and [tracing](https://docs.agno.com/tracing/overview.md) for optional setup.
-
-[FileSystem](https://docs.agno.com/filesystem/overview.md) stores durable notes/checkpoints, not secrets. Scope namespaces and users explicitly; namespaces do not replace authorization. Older `DbFileSystem` tables must be re-keyed by namespace, user, and path using the database-specific [3.1 migration](https://github.com/agno-agi/agno/releases/tag/v3.1.0), separate from `MigrationManager`. Stop the app, back up data, and obtain approval first.
 
 ## Evaluation and Observability
 
 - Use [evals](https://docs.agno.com/evals/overview.md) and [repeatable suites](https://docs.agno.com/evals/suite/overview.md) for answer quality, tool reliability, and performance. Syntax checks are not agent evaluations; budget judge calls separately.
 - Trace success, tool failure, and cancellation. Inspect sources and approvals; apply retention and redaction to prompts, tool arguments, traces, and results.
 - Connect to [os.agno.com](https://os.agno.com) only when requested. Verify Control Plane visibility separately from local API success.
+
+## More Docs
+
+- [API serving](https://docs.agno.com/use-cases/agents-as-api.md)
+- [Official AgentOS cookbook](https://github.com/agno-agi/agno/tree/main/cookbook/05_agent_os)

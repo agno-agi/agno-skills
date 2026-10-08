@@ -1,6 +1,6 @@
 # Agno Skills
 
-Official [Agno](https://github.com/agno-agi/agno) skill for coding agents. Build and debug agents, teams, workflows, and AgentOS services using focused references and current official docs.
+Official [Agno](https://github.com/agno-agi/agno) skill for coding agents. Build and debug with focused code patterns, current Markdown docs, and release-matched source when the docs leave gaps.
 
 Covers structured output, streaming, tools, approvals, RAG, learning, MCP, auth, deployment, and evals. It preserves existing project/provider choices; SDK-only tasks need no signup or deployment.
 
@@ -44,11 +44,11 @@ Example requests:
 
 Use `/agno` where the client supports skill commands. Docs MCP is optional; the skill can read the official Markdown docs instead.
 
-## Contents and Compatibility
+## Contents
 
 [`SKILL.md`](plugins/agno/skills/agno/SKILL.md) routes requests to topic files in [`references/`](plugins/agno/skills/agno/references). It loads only the guidance needed for the task.
 
-References target **Agno 3.1.1**. Check the project's pinned version and migration guidance before applying newer APIs. Example model IDs do not guarantee account access.
+The [docs map](plugins/agno/skills/agno/references/docs-map.md) routes SDK and AgentOS feature families. [Source gaps](plugins/agno/skills/agno/references/source-gaps.md) covers source inspection, scorers/rollouts, managed authorization, and follow-up configuration.
 
 ## Updating
 
@@ -69,14 +69,14 @@ uv pip install -r requirements-dev.txt
 .venv/bin/ruff format --check scripts tests
 ```
 
-For optional offline API/example checks against published Agno 3.1.1:
+For optional offline API/example checks:
 
 ```bash
 uv pip install -r requirements-smoke.txt
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-CI runs both suites. They check metadata, links, syntax, imports, constructor arguments, and model-free workflows—not live model calls, external services, or deployment. API tests skip when Agno is absent. When changing guidance, verify it against the relevant docs and installed APIs.
+CI runs both suites. They check metadata, local links, syntax, imports, constructor arguments, offline example construction, and model-free workflow behavior. They do not validate live model calls, external services, or deployment. API tests skip when Agno is absent.
 
 ## Sources
 

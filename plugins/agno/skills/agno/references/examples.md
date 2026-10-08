@@ -1,14 +1,15 @@
 # SDK Examples and Patterns
 
+Docs: [First agent](https://docs.agno.com/first-agent.md).
+
 Start with the SDK. Add [AgentOS](agentos.md) only when a service is needed.
 
 ## Prerequisites
 
-- API syntax was checked against Agno 3.1.1. In the project's environment, check `python -c "from importlib.metadata import version; print(version('agno'))"`. Consult [release notes](https://github.com/agno-agi/agno/releases) for older pins.
 - For a new environment: `uv pip install "agno[openai,sqlite]"`. Otherwise retain dependency pins and [provider/model choices](models.md).
-- Execution needs `OPENAI_API_KEY`, network access, and model access. For `gpt-6.1-sol`, check the [GPT-6 SDK version requirement](models.md#configure-an-explicit-adapter); account availability is not guaranteed.
+- Execution needs `OPENAI_API_KEY`, network access, and model access. Check the [adapter configuration](models.md); account availability is not guaranteed.
 
-Each Python block is a separate script. Importing constructs an agent offline without a key. Main guards prevent model calls on import. Reuse agents outside request loops.
+Each Python block is a separate script. Importing constructs an agent offline without a key. Main guards prevent model calls on import.
 
 ## 1. Small Agent
 
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     )
 ```
 
-`print_response()` prints to the console. See [Agents](agents.md#choose-the-run-api) for result, async, and streaming APIs.
+`print_response()` prints to the console. See [Agents](agents.md) for result, async, and streaming APIs.
 
 ## 2. Typed Extraction
 
@@ -105,3 +106,9 @@ Reuse the session ID within one conversation; start a new ID for another. Servic
 - Specialists: [Teams](teams.md); explicit control flow: [Workflows](workflows.md).
 
 Find other current guides in the [docs index](https://docs.agno.com/llms.txt).
+
+## More Docs
+
+- [Building agents](https://docs.agno.com/agents/building-agents.md) and [running agents](https://docs.agno.com/agents/running-agents.md)
+- [Sessions](https://docs.agno.com/sessions/overview.md)
+- [Model providers](https://docs.agno.com/models/providers/model-index.md)

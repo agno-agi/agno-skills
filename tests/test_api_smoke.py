@@ -6,6 +6,8 @@ import importlib
 import importlib.util
 import inspect
 import os
+import contextlib
+import io
 from pathlib import Path
 import re
 import tempfile
@@ -56,9 +58,12 @@ class AgnoExampleTests(unittest.TestCase):
 
     def load(self, name, index=0, namespace=None):
         namespace = namespace if namespace is not None else {"__name__": "doc_example"}
-        exec(
-            compile(blocks(name)[index], f"{name}:block-{index + 1}", "exec"), namespace
-        )
+        # Model-free examples print their results; keep test output readable.
+        with contextlib.redirect_stdout(io.StringIO()):
+            exec(
+                compile(blocks(name)[index], f"{name}:block-{index + 1}", "exec"),
+                namespace,
+            )
         return namespace
 
     def test_fenced_agno_imports_and_constructor_keywords(self):

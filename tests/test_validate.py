@@ -103,7 +103,6 @@ class ValidatorTests(unittest.TestCase):
     def test_obsolete_examples_not_prose_or_comments(self):
         for code in [
             "from agno.tools.mcp import MultiMCPTools",
-            "from agno.models.openai import OpenAIChat",
             "from agno.tools.mcp import MCPToolbox",
             'model = "gpt-4o-mini"',
         ]:
@@ -113,6 +112,14 @@ class ValidatorTests(unittest.TestCase):
         self.write(
             self.reference,
             "# Setup\nHistorical OpenAIChat and gpt-4o.\n```python\n# MultiMCPTools\n```\n",
+        )
+        self.assertEqual(validate(self.root), [])
+
+    def test_supported_chat_completions_adapter(self):
+        self.write(
+            self.reference,
+            "# Setup\n```python\nfrom agno.models.openai import OpenAIChat\n"
+            'model = OpenAIChat(id="project-model")\n```\n',
         )
         self.assertEqual(validate(self.root), [])
 
