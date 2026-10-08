@@ -11,7 +11,7 @@ Deliver the smallest working solution. Start with one agent; use teams for model
 
 1. Read project instructions, dependencies, and existing tests. Preserve the framework, provider, database, and deployment choices.
 2. Inspect the installed Agno version and, for editable installs, the source revision and local changes.
-3. Read the matching reference below, then fetch its official docs page before writing code, as described under Use Current Sources below. Take provider classes, model IDs, and parameters the reference does not show from that page or the installed source, not from memory. If fetching fails, say so and continue with the reference and installed source.
+3. Read the matching reference below. When it doesn't show an API you need, check the official docs page (see Use Current Sources below) or the installed source, not memory. Report which you used.
 
 ## Choose the Path
 
